@@ -4,412 +4,359 @@
 #include <locale>
 #include <windows.h>
 using namespace std;
-
-int i, symnum, argnum, strnum = 0;
-bool start, finish, text, comma;
-int argint[9999];
-float argfloat[9999];
-char ops[9999];
-bool argbool[9999];
-string args[9999];
-string argstr[9999];
-string str, answer, name, error;
-string varnames[9999];
-string vartypes[9999];
-char ens[] = "abcdefghijklmnopqrstuvwxyz";
-char enb[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-char rus[] = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
-char rub[] = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
-//26 33
-
+string errors[1024], str; int i, symnum, strnum = 0; bool autoround, test = false;
+int argnum; string result, args[1024]; char ops[1024]; bool start, finish;
+string argstr[1024]; int argint[1024]; float argfloat[1024]; bool argbool[1024];
+string varnames[1024]; string vartypes[1024]; int vars;
+string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";//118
+void error(string reason) {
+	cout << " (ошибка) ";
+	errors[0] = to_string(stoi(errors[0]) + 1);
+	if (reason.length() == 2)
+		reason += " - неожиданный символ";
+	errors[stoi(errors[0])] = reason;
+}
 void readstr() {
-	if (comma == false)
-		error = "нет запятой";
-	comma = false;
-	text = true;
+	cout << symnum << " - ' - начало строки" << endl;
+	symnum++;
 	argnum++;
 	args[argnum] = "str";
-	while (text == true) {
-		if (str[symnum] != '"')
-			cout << "readstr - " << text << " symnum: " << symnum << " - " << str[symnum] << endl;
-		if (symnum == str.length()) {
-			error = "текст не внутри ковычек";
-			break;
-		}
-		else
-			symnum++;
-		if (str[symnum] == '"')
-			text = false;
-		else
+	if (str[symnum] != '\'')
+		do {
+			cout << symnum << " - " << str[symnum] << " - чтение строки..." << endl;
 			argstr[argnum] = argstr[argnum] + str[symnum];
-		
-	}
-	symnum++;
+			symnum++;		
+		} while (str[symnum] != '\'' and symnum < str.length());
+	cout << symnum << " - ' - конец строки, " << argnum << " аргумент записан";
+	if (argstr[argnum].length() == 0)
+		cout << " (пустая строка)";
+	cout << endl;
+	//argstr[argnum].pop_back();
+	if (symnum == str.length())
+		error("текст не внутри ковычек");
+	else
+		symnum++;
+	symnum--;
 }
 void readfloat(int first) {
-	//int round;
-	float precision = 10;
-	cout << "FloatReading..." << endl;
-	if (comma == false)
-		error = "нет запятой";
-	comma = false;
-	//argfloat[0] = 1;
-	//argnum++;
+	float precision = 10;	
+	argint[argnum] = 0;
 	argfloat[argnum] = first;
 	args[argnum] = "float";
-	//precision = 1;
 	argfloat[0] = 1;
 	symnum++;
-	do {
-		cout << "reading float..." << " symnum: " << symnum << " " << "str[symnum]: " << str[symnum] << " argfloat[argnum]: " << argfloat[argnum] << endl;
-		//if (argfloat[0] == 1)
-		symnum++;
-		//argfloat[argnum] *= 10;
-		//if (precision == 0)
-		switch (str[symnum]) {
-		case '1': argfloat[argnum] += 1 / precision; break;
-		case '2': argfloat[argnum] += 2 / precision; break;
-		case '3': argfloat[argnum] += 3 / precision; break;
-		case '4': argfloat[argnum] += 4 / precision; break;
-		case '5': argfloat[argnum] += 5 / precision; break;
-		case '6': argfloat[argnum] += 6 / precision; break;
-		case '7': argfloat[argnum] += 7 / precision; break;
-		case '8': argfloat[argnum] += 8 / precision; break;
-		case '9': argfloat[argnum] += 9 / precision; break;
-		case '0': break;
-		default: argfloat[0] = 0; break;
+	cout << symnum - 1 << " - " << str[symnum - 1] << " - начало дробной части" << endl;
+	do {		
+		switch (str[symnum]) {//можно превратить в условие по коду символа
+			case '1': argfloat[argnum] += 1 / precision; break;
+			case '2': argfloat[argnum] += 2 / precision; break;
+			case '3': argfloat[argnum] += 3 / precision; break;
+			case '4': argfloat[argnum] += 4 / precision; break;
+			case '5': argfloat[argnum] += 5 / precision; break;
+			case '6': argfloat[argnum] += 6 / precision; break;
+			case '7': argfloat[argnum] += 7 / precision; break;
+			case '8': argfloat[argnum] += 8 / precision; break;
+			case '9': argfloat[argnum] += 9 / precision; break;
+			case '0': break;
+			default: argfloat[0] = 0; break;
 		}
-
-		//cout << "=========== 3 / 0 = " << 3 / 0 << endl;
+		if (argfloat[0] == 1)
+		switch (str[symnum + 1]) {
+			case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+				cout << symnum << " - " << str[symnum] << " - чтение дробной части..." << endl; break;
+			default: cout << symnum << " - " << str[symnum] << " - конец числа, " << argnum << " аргумент записан" << endl; break;
+		}
+		symnum++;
 		if (precision > 1)
-			precision *= 10;
+			precision *= 10;		
 	} while (argfloat[0] == 1);
 	symnum--;
 	precision /= 10;
-	//round = argfloat[argnum] * precision;
-	//argfloat[argnum] = round / precision;
-	//argfloat[argnum] = roundf(argfloat[argnum] * precision) / precision; // округлит до 3 знаков
-
 }
-void readint(int first) {
-	bool notint = false;
-	if (comma == false)
-		error = "нет запятой";
-	//comma = false;
+void readint(int first){ 
+	bool notint = false, zero = false;
 	argint[0] = 1;
 	argnum++;
 	argint[argnum] = first;
-		args[argnum] = "int";
-	do {
-		cout << "reading integer..." << symnum << " " << str[symnum] << " " << argint[argnum] << endl;
-		if (argint[0] == 1)
-			symnum++;
-
-		argint[argnum] *= 10;
-		switch (str[symnum]) {
-			case '1': argint[argnum] += 1; break;
-			case '2': argint[argnum] += 2; break;
-			case '3': argint[argnum] += 3; break;
-			case '4': argint[argnum] += 4; break;
-			case '5': argint[argnum] += 5; break;
-			case '6': argint[argnum] += 6; break;
-			case '7': argint[argnum] += 7; break;
-			case '8': argint[argnum] += 8; break;
-			case '9': argint[argnum] += 9; break;
-			case '.': notint = true; break;
-			case '0': break;
-			default: 
-				argint[argnum] /= 10;
-				argint[0] = 0;
-				break;			
-		}
+	args[argnum] = "int";
+	switch (str[symnum + 1]) {
+		case '.': case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+			cout << symnum << " - " << first << " - начало числа" << endl;
+			if (first == 0)
+				switch (str[symnum + 1]) {
+					case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': 
+						error ("неверная запись числа"); break;//сократить фрагмент
+					case '.': notint = true; symnum++; break;
+					default:
+						zero = true;
+						symnum++;//+-
+						break;
+				}
+			if (notint == false and zero == false)
+				do {
+					if (argint[0] == 1)
+						symnum++;
+					argint[argnum] *= 10;
+					switch (str[symnum]) {
+						case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+							switch (str[symnum + 1]) {
+								case '.': case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+									cout << symnum << " - " << str[symnum] << " - чтение числа... " << endl; break;						
+							}
+							argint[argnum] += (str[symnum]) - '0';
+							break;
+						case '.': notint = true; break;
+						case '0': break;
+						default: 
+							argint[argnum] /= 10;
+							argint[0] = 0;
+							break;			
+					}				
+				}while (argint[0] == 1 && notint == false);
+			if (notint == true)
+				readfloat(argint[argnum] / 10);
+			else
+				cout << symnum - 1 << " - " << str[symnum - 1] << " - конец числа, " << argnum << " аргумент записан" << endl;
+			symnum--;//+-
+			break;
+		default: cout << symnum << " - " << str[symnum] << " - число, " << argnum << " аргумент записан" << endl; break;
 	}
-	while (argint[0] == 1 && notint == false);
-	if (notint == true){
-		symnum--;
-		readfloat(argint[argnum] / 10);		
-		argint[argnum] = 0;
-	}
-	else
-		symnum--;
-	comma = false;
-		
-	//cout << "---------" << argint[argnum] << endl;
+	if (argnum > 1 and ops[argnum] == 's')//'n'
+		if (notint == true)
+			error("нет запятой перед " + to_string(argfloat[argnum]));
+		else
+			error("нет запятой перед " + to_string(argint[argnum]));
 }
-void getunknown() {
+void readunknown() {
 	string word;
-	bool itsvar = false;
-	if (comma == false)
-		error = "нет запятой";
-	comma = false;
-	do {
+	bool text, itsvar = false;
+	char valid[10] = { ' ', ';', ')', '-', '+', '*', '/'};
+	argnum++;
+	args[argnum] = "unknown";
+	symnum--;
+	do {		
 		symnum++;
 		text = true;
 		if (symnum == str.length()) {
 			text = false;
-			error = "непредвиденная ошибка";
+			error ("неожиданное окончание строки");
 			symnum--;
 		}
 		if (text == false)
 			break;
 		text = false;
-		for (i = 0; i < 26; i++)
-			if (str[symnum] == ens[i])
+		for (i = 0; i < 118; i++)
+			if (str[symnum] == alphabet[i]) {
 				text = true;
-		for (i = 0; i < 26; i++)
-			if (str[symnum] == enb[i])
-				text = true;
-		for (i = 0; i < 33; i++)
-			if (str[symnum] == rus[i])
-				text = true;
-		for (i = 0; i < 33; i++)
-			if (str[symnum] == rub[i])
-				text = true;
+				cout << symnum << " - " << str[symnum] << " - чтение неизвестного идентификатора..." << endl;
+			}	
 		if (text == true)
 			word += str[symnum];
+		else {
+			for (i = 1; i < 8; i++)
+				if (str[symnum] == valid[i])
+					valid[0] == '1';
+			if (valid[0] == '0')
+				error("некорректная запись идентификатора");
+		}			
 	} while (text == true);
-	
-	//cout << "word - " << '"' << word << '"' << endl;
 	if (word == "тру"){ 
-		argnum++;
+		cout << "значение выявлено (тру), аргумент записан" << endl;
 		argbool[argnum] = true;
 		args[argnum] = "bool";
 	}		
 	if (word == "фейк"){ 
-		argnum++;
+		cout << "значение выявлено (фейк), аргумент записан" << endl;		
 		argbool[argnum] = false;
 		args[argnum] = "bool";
 	}
 	varnames[0] = "3";
 	varnames[1] = "счетчик";
 	varnames[2] = "флаг";
-	varnames[3] = "показатель";	
+	varnames[3] = "показатель";
 	for (i = 0; i < stoi(varnames[0]) + 1; i++)
-		if (word == varnames[i])
+		if (word == varnames[i]) {
 			itsvar = true;
-	if (word != "тру" and word != "фейк" and itsvar == false)
-		error = "неизвестное имя: " + word;
+			args[argnum] == "var";//!
+		}
+	if (args[argnum] == "unknown") {
+		error("неизвестное имя: " + word);
+		argnum--;
+		cout << "идентификатор \"" << word << "\" неизвестен, отмена записи аргумента" << endl;
+	}
 	symnum--;
+	if (argnum > 1 and ops[argnum] == 's')
+		error("нет запятой");
 }
 void perform() {
-	if (args[1] == "int")
-		cout << "perform:" << argint[1];
-	if (args[1] == "float")
-		cout << "perform:" << argfloat[1];
-	if (args[1] == "str")
-		cout << "perform:" << argstr[1];
-	if (args[1] == "zero")
-		cout << "perform:" << 0;
-	if (args[1] == "bool")
-		cout << "perform:" << argbool[1];
-	
-
-
-	for (i = 2; i < argnum + 1; i++){
-		if (ops[i] == '\0')
-			ops[i] = ',';
-		if (ops[i] != ','){
-			
-			if (args[i] == "str"){
-				cout << " + " << argstr[i];
-				if (args[i - 1] == "str")
-					if (ops[i] == '+') {
-						
-						argstr[i] = argstr[i - 1] + argstr[i];
-						args[i - 1] = "skip";
-						argstr[i - 1] = "";
-					}
-					else
-						error = "строки можно только складывать";
-				if (args[i - 1] == "int")
-					if (ops[i] == '+') {
-						argstr[i] = to_string(argint[i - 1]) + argstr[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-					else
-						error = "числа со строками можно только складывать";
-				if (args[i - 1] == "float")
-					if (ops[i] == '+') {
-						argstr[i] = to_string(argfloat[i - 1]) + argstr[i];
-					
-						args[i - 1] = "skip";
-						argfloat[i - 1] = NULL;
-					}
-					else
-						error = "числа со строками можно только складывать";
-				if (args[i - 1] == "zero") {
-					if (ops[i] == '+') {
-						argstr[i] = '0' + argstr[i];
-						args[i - 1] = "skip";
-					}
-					else
-						error = "числа со строками можно только складывать";
-				}
-			}
-			if (args[i] == "int") {
-				cout << ' ' << ops[i] << ' ' << argint[i];
-				if (args[i - 1] == "str")
-					if (ops[i] == '+') {
-						//cout << argint[i - 1] << " + " << argstr[i] << " = " << argstr[i - 1] + to_string(argint[i]) << endl;
-						argstr[i] = argstr[i - 1] + to_string(argint[i]);
-						args[i - 1] = "skip";
-						args[i] = "str";
-						argint[i] = NULL;
-						argstr[i - 1] = "";
-					}
-					else
-						error = "числа со строками можно только складывать";
-				
-				if (args[i - 1] == "zero") {
-					args[i - 1] = "skip";
-					if (ops[i] == '*' or ops[i] == '/') {
-						argint[i] = NULL;
-						args[i] = "zero";
-					}
-					if (ops[i] == '-')
-						argint[i] = 0 - argint[i];
-				}
-
-
-				if (args[i - 1] == "int") {
-					if (ops[i] == '-') {
-						argint[i] = argint[i - 1] - argint[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-					if (ops[i] == '+') {//cout << argint[i - 1] << " + " << argint[i] << " = " << argint[i - 1] + argint[i] << endl;
-						argint[i] = argint[i - 1] + argint[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-					if (ops[i] == '*') {//cout << argint[i - 1] << " * " << argint[i] << " = " << argint[i - 1] * argint[i] << endl;
-						argint[i] = argint[i - 1] * argint[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-					if (ops[i] == '/') {//cout << argint[i - 1] << " / " << argint[i] << " = " << argint[i - 1] / argint[i] << endl;
-						argint[i] = argint[i - 1] / argint[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-				}
-				if (args[i - 1] == "float"){
-					if (ops[i] == '-') {
-						argfloat[i] = argfloat[i - 1] - argint[i];
-						args[i] = "float";
-						args[i - 1] = "skip";
-						argint[i] = NULL;
-						argfloat[i - 1] = NULL;
-						break;
-					}
-					if (ops[i] == '+') {
-						argfloat[i] = argfloat[i - 1] + argint[i];
-						args[i] = "float";
-						args[i - 1] = "skip";
-						argint[i] = NULL;
-						argfloat[i - 1] = NULL;
-						break;
-					}
-					if (ops[i] == '*') {
-						argfloat[i] = argfloat[i - 1] * argint[i];
-						args[i] = "float";
-						args[i - 1] = "skip";
-						argint[i] = NULL;
-						argfloat[i - 1] = NULL;
-						break;
-					}
-					if (ops[i] == '/') {
-						argfloat[i] = argfloat[i - 1] / argint[i];
-						args[i] = "float";
-						args[i - 1] = "skip";
-						argint[i] = NULL;
-						argfloat[i - 1] = NULL;
-						break;
-					}
-				}
-			}
-			if (args[i] == "float") {
-				cout << ' ' << ops[i] << ' ' << argfloat[i];
-				if (args[i - 1] == "str")
-					if (ops[i] == '+') {
-						//cout << argint[i - 1] << " + " << argstr[i] << " = " << argstr[i - 1] + to_string(argint[i]) << endl;
-						argstr[i] = argstr[i - 1] + to_string(argfloat[i]);
-						args[i - 1] = "skip";
-						args[i] = "str";
-						argfloat[i] = NULL;
-						argstr[i - 1] = "";
-					}
-					else
-						error = "числа со строками можно только складывать";
-
-				if (args[i - 1] == "zero") {
-					args[i - 1] = "skip";
-					if (ops[i] == '*' or ops[i] == '/') {
-						argfloat[i] = NULL;
-						args[i] = "zero";
-					}
-					if (ops[i] == '-')
-						argfloat[i] = argfloat[i] - argfloat[i] - argfloat[i];
-				}
-
-
-				if (args[i - 1] == "int") {
-					if (ops[i] == '-') {
-						argfloat[i] = argint[i - 1] - argfloat[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-					if (ops[i] == '+') {
-						argfloat[i] = argint[i - 1] + argfloat[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-					if (ops[i] == '*') {
-						argfloat[i] = argint[i - 1] * argfloat[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-					if (ops[i] == '/') {
-						argfloat[i] = argint[i - 1] / argfloat[i];
-						args[i - 1] = "skip";
-						argint[i - 1] = NULL;
-					}
-				}
-
-				if (args[i - 1] == "float") {
-					if (ops[i] == '-') {
-						argfloat[i] = argfloat[i - 1] - argfloat[i];						
-						args[i - 1] = "skip";
-						argfloat[i - 1] = NULL;
-						break;
-					}
-					if (ops[i] == '+') {
-						argfloat[i] = argfloat[i - 1] + argfloat[i];
-						args[i - 1] = "skip";
-						argfloat[i - 1] = NULL;
-						break;
-					}
-					if (ops[i] == '*') {
-						argfloat[i] = argfloat[i - 1] * argfloat[i];
-						args[i - 1] = "skip";
-						argfloat[i - 1] = NULL;
-						break;
-					}
-					if (ops[i] == '/') {
-						argfloat[i] = argfloat[i - 1] / argfloat[i];
-						args[i - 1] = "skip";
-						argfloat[i - 1] = NULL;
-						break;
-					}
-				}
-			}
-			//bool + str = "тру"/"фейк" + str
-			//bool + int/float = "1/0" + int/float
-			if (args[i] == "bool")
-				error = "математические операции с булевыми невозможны";
-		}
+	string operands;
+	int first = 1;
+	bool firstable = false;
+	cout << endl << "применение математических операций к аргументам (";
+	for (i = 1; i < argnum + 1; i++) {
+		if (i > 1)
+			cout << ' ' << ops[i] << ' ';
+		if (args[i] == "str")
+			cout << argstr[i];
+		if (args[i] == "int")
+			cout << argint[i];
+		if (args[i] == "float")
+			cout << argfloat[i];		
+		if (args[i] == "bool")
+			if (argbool[i] == true)
+				cout << "тру";
+			else
+				cout << "фейк";
 	}
+	cout << ')' << endl << endl;
+	do {
+		for (i = 2; i < argnum + 1; i++) {
+			operands = args[i - 1] + args[i];
+			if (ops[i] == '*') {				
+				if (operands == "strstr" or operands == "strint" or operands == "strfloat" or operands == "strbool")
+					error("строку нельзя умножать");
+				if (operands == "intstr" or operands == "floatstr" or operands == "boolstr")
+					error("на строку нельзя умножать");
+				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "intfloat" or operands == "floatint") {
+					argfloat[i - 1] += argint[i - 1];
+					argfloat[1] += argint[1];
+					argfloat[i] *= argfloat[i - 1];
+					args[i] = "float";
+				}
+				if (operands == "intint")
+					argint[i] *= argint[i - 1];
+				if (operands == "floatfloat")
+					argfloat[i] *= argfloat[i - 1];
+			}
+			if (ops[i] == '/') {
+				if (operands == "strstr" or operands == "strint" or operands == "strfloat" or operands == "strbool")
+					error("строку нельзя делить");
+				if (operands == "intstr" or operands == "floatstr" or operands == "boolstr")
+					error("на строку нельзя делить");
+				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "intfloat" or operands == "floatint") {
+					argfloat[i - 1] += argint[i - 1];
+					argfloat[i] += argint[i];
+					if (argfloat[i] != 0)
+						argfloat[i] = argfloat[i - 1] / argfloat[i];
+					else
+						error("на ноль делить нельзя");
+					args[i] = "float";
+				}
+				if (operands == "intint")
+					if (argint[i] != 0)
+						if (autoround == true)
+							argint[i] = argint[i - 1] / argint[i];
+						else {
+							args[i - 1] = "float";
+							args[i] = "float";
+							argfloat[i - 1] = argint[i - 1];
+							argfloat[i] = argint[i];
+							argfloat[i] = argfloat[i - 1] / argfloat[i];
+						}
+					else
+						error("на ноль делить нельзя");	
+			}
+			if (ops[i] == '*' or ops[i] == '/') {
+				first++;
+				while (i > first) {
+					ops[i] = ops[i - 1];
+					i--;
+					args[i] = args[i - 1];
+					argstr[i] = argstr[i - 1];
+					argint[i] = argint[i - 1];
+					argfloat[i] = argfloat[i - 1];
+					argbool[i] = argbool[i - 1];
+				}
+				args[first - 1] = "skip";
+				ops[first] = 's';
+			}
+		}
+		firstable = false;
+		for (i = 2; i < argnum + 1; i++)
+			if (ops[i] == '*' or ops[i] == '/')
+				firstable = true;
+	} while (firstable == true);
+	for (i = first + 1; i < argnum + 1; i++){
+		operands = args[i - 1] + args[i];
+		switch (ops[i]) {
+			case '-': {
+				if (operands == "strstr" or operands == "strint" or operands == "strfloat" or operands == "strbool")
+					error("из строки нельзя вычитать");
+				if (operands == "intstr" or operands == "floatstr" or operands == "boolstr")
+					error("нельзя вычесть строку");
+				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")// упорядочить
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "intfloat" or operands == "floatint") {
+					argfloat[i - 1] += argint[i - 1];
+					argfloat[1] += argint[1];
+					argfloat[i] = argfloat[i - 1] - argfloat[i];
+					args[i] = "float";
+				}
+				if (operands == "intint")
+					argint[i] = argint[i - 1] - argint[i];
+				if (operands == "floatfloat")
+					argfloat[i] = argfloat[i - 1] - argfloat[i];
+				break;
+			}			
+			case '+': {
+				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")
+					error("математические действия не применимы к двоичному значению");
+				if (operands == "strstr")
+					argstr[i] = argstr[i - 1] + argstr[i];
+				if (operands == "strint")
+					argstr[i] = argstr[i - 1] + to_string(argint[i]);
+				if (operands == "strfloat")
+					argstr[i] = argstr[i - 1] + to_string(argfloat[i]);
+				if (operands == "strint" or operands == "strfloat")
+					args[i] = "str";
+				if (operands == "intstr")
+					argstr[i] = to_string(argint[i - 1]) + argstr[i];
+				if (operands == "intint")
+					argint[i] += argint[i - 1];
+				if (operands == "intfloat" or operands == "floatint") {
+					argfloat[i - 1] += argint[i - 1];
+					argfloat[1] += argint[1];
+					argfloat[i] += argfloat[i - 1];
+					args[i] = "float";
+				}
+				if (operands == "floatstr")
+					argstr[i] = to_string(argfloat[i - 1]) + argstr[i];
+				if (operands == "floatfloat")
+					argfloat[i] += argfloat[i - 1];
+				break;
+			}
+		case 's': break;
+		case ',': break;
+		default: error("действие не задано"); break;
+		}
+		if (ops[i] == '+' or ops[i] == '-') {
+			first++;
+			while (i > first) {
+				ops[i] = ops[i - 1];
+				i--;
+				args[i] = args[i - 1];
+				argstr[i] = argstr[i - 1];
+				argint[i] = argint[i - 1];
+				argfloat[i] = argfloat[i - 1];
+				argbool[i] = argbool[i - 1];
+			}
+			args[first - 1] = "skip";
+			ops[first] = 's';
+			i = first;
+		}		
+	}	
 }
 bool compare(){
 	/*
@@ -417,8 +364,6 @@ bool compare(){
 			case '=': break;
 			case '>': break;
 			case '<': break;
-			//case '>=': break;
-			//case '<=': break;
 			case '!': break;
 		}
 		*/
@@ -428,68 +373,47 @@ int main() {
 	setlocale(LC_ALL, "");
 	SetConsoleOutputCP(1251);
 	SetConsoleCP(1251);
-	//strnum = 0;
-	while (true) {
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SetConsoleTextAttribute(hConsole, 11);
+	autoround = true;
+	test = true;
+	while (test == true) {
 		strnum++;
 		getline(cin, str);
-		//for (symnum = 0; symnum < str.length(); symnum++)
-			//cout << endl << symnum << " - " << str[symnum] << endl;
-		//str = str + ';';
 		start = false;
 		finish = false;
-		text = false;
-		comma = true;
-		error = "нет ошибок";
+		errors[0] = "0";
 		argint[0] = 0;
 		argstr[0] = "";
 		argnum = 0;
-		answer = "";
-		
-		/////////////////////////////////////////////////////////////////////////проверка на ';'
-		//if (str.rfind("изрекаю", 0) == 0)
-			for (symnum = 0; symnum < str.length(); symnum++) {
-				//cout << "---" << argnum << " " << str[symnum] << " " << argint[argnum - 1] << " " << argint[argnum] << endl;
-				//cout << "symnum: " << symnum << ", " << str[symnum] << ", start: " << start << ", finish: " << finish << ", error " << error << endl;
-				
+		ops[0] = 'F';
+		result = "";
+		cout << endl << "команда:" << endl << endl << "аргументация:" << endl;
+		if (str[str.length() - 1] != ';')
+			str += ';';//УБРАТЬ
+		if (str[str.length() - 1] != ';')
+			error("неверное окончание строки");
+		else
+			for (symnum = 0; symnum < str.length() and errors[0] == "0"; symnum++) {
+				if (ops [argnum + 1] == '\0')
+				ops[argnum + 1] = 's';
 				switch (str[symnum]) {
-					case ' ': break;
-					case '0':
-						argnum++;
-						switch (str[symnum + 1]) {
-							case '.':
-								readfloat(0);
-								break;
-							case ' ':
-								args[argnum] = "zero";
-								break;
-							case ',':
-								args[argnum] = "zero";
-								comma = true;
-								break;
-							case ')':
-								args[argnum] = "zero";
-								finish = true;
-								break;
-							default:
-								error = "неожиданный символ " + '\'' + str[symnum] + '\'';
-								cout << "default: " << str[symnum + 1] << endl;
-								break;
-						}
+					case ' ': cout << symnum << " -   - пробел" << endl; break;
+					case ',': 
+						if (argnum == 0)
+							error("перечисления не начинаются с запятой");
+						if (ops[argnum + 1] == ',')
+							error("лишняя запятая");
+						ops[argnum + 1] = ',';
+						cout << symnum << " - , - запятая" << endl;
 						break;
-					case ',':
-						if (argnum > 0 && comma == false)
-							comma = true;
-						else
-							error = "лишняя запятая";
+					case ';': cout << symnum << " - ; - конец команды" << endl << endl; break;
+					case '-': case '+': case '*': case '/': 						
+						ops[argnum + 1] = str[symnum]; 
+						ops[0] = 'T';
+						cout << symnum << " - " << str[symnum] << " - действие задано" << endl; 
 						break;
-
-					case '-': comma = true; ops[argnum + 1] = '-'; ops[argnum + 2] = ','; break;
-					case '+': comma = true; ops[argnum + 1] = '+'; ops[argnum + 2] = ','; break;
-					case '*': comma = true; ops[argnum + 1] = '*'; ops[argnum + 2] = ','; break;
-					case '/': comma = true; ops[argnum + 1] = '/'; ops[argnum + 2] = ','; break;
-					
-
-
+					case '0': readint(0); break;//сократить
 					case '1': readint(1); break;
 					case '2': readint(2); break;
 					case '3': readint(3); break;
@@ -499,98 +423,80 @@ int main() {
 					case '7': readint(7); break;
 					case '8': readint(8); break;
 					case '9': readint(9); break;
-					case '(': start = true; break;
-					case ')': finish = true; break;
-					case '"': readstr(); symnum--; break;
-					default:
-						for (i = 0; i < 26; i++)
-							if (str[symnum] == ens[i] or str[symnum] == enb[i]) {
-								symnum--;
-								getunknown();
-								error = "не ошибка";
-								i = 26;
-							}			
-						if (error != "не ошибка") //временный костыль
-							for (i = 0; i < 33; i++)
-								if (str[symnum] == rus[i] or str[symnum] == rub[i]) {
-									symnum--;
-									getunknown();
-									error = "не ошибка";
-									i = 33;
-								}
-						if (error != "не ошибка")
-							error = "неожиданный символ " + '\'' + str[symnum] + '\'';
-							
-						else
-							error = "нет ошибок";
-							
+					case '(':
+						cout << symnum << " - ( - начало аргументации" << endl;						
+						if (start == true)
+							error("повторное начало аргументации");
+						start = true; 
 						break;
-				}				
-				
+					case ')': 
+						cout << symnum << " - ) - конец аргументации" << endl; 
+						if (finish == true)
+							error("повторный конец аргументации");
+						finish = true;
+						break;
+					case '\'': readstr(); break;
+					default:
+						if (alphabet.find(str[symnum]) != alphabet.npos)
+							readunknown();
+						else
+							error (to_string(str[symnum]));						
+						break;
+				}					
 			}
-			
-			perform();
-			
-			
-			
-			if (start == false or finish == false) 
-				error = "аргументы не в скобках";
-			if (comma == true)
-				error = "аргументы не в скобках";
-			answer = "";
-			
-				
-			cout << endl << "args: " << endl;
-			args[0] = to_string(argnum);
-			for (argnum = 0; argnum < stoi(args[0]) + 1; argnum++) {
-				if (args[argnum] == "int")
-					answer += to_string(argint[argnum]);
-				if (args[argnum] == "float")
-					answer += to_string(argfloat[argnum]);
-				if (args[argnum] == "str")
-					answer += argstr[argnum];
-				if (args[argnum] == "zero")
-					answer += '0';
-				if (args[argnum] == "bool")
-					if (argbool[argnum] == true)
-						answer += "тру";
-					else
-						answer += "фейк";
-				//if skip
-				cout << "arg " << argnum << ": " << args[argnum] << endl;
-				//default: answer += "NULL"; break;
+			if (start == false)
+				error("нет открывающей скобки");
+			if (finish == false)
+				error("нет закрывающей скобки");
+			if (argnum == 0)
+				error("аргументы отсутствуют");
+			else {
+				if (ops[0] == 'T')
+					perform();
+				for (i = 0; i < argnum + 1; i++) {
+					if (args[i] == "int")
+						result += to_string(argint[i]);
+					if (args[i] == "float")
+						result += to_string(argfloat[i]);
+					if (args[i] == "str")
+						result += argstr[i];
+					if (args[i] == "zero")
+						error("ноль");
+					if (args[i] == "bool")
+						if (argbool[i] == true)
+							result += "тру";
+						else
+							result += "фейк";
+					ops[i] = 's';
+					args[i] = "";//тут можно придумать возможное обозначение присутствия типа аргумента в предыдущей итерации
+					argstr[i] = "";
+					argint[i] = NULL;
+					argfloat[i] = NULL;
+					argbool[i] = NULL;			
+				}
+				ops[0] = 'F';
+				argnum = 0;			
 			}
-			
-			if (error == "нет ошибок")
-				cout << endl << endl << endl << answer << endl << endl;
+			cout << "ошибки: " << errors[0] << endl;
+			if (errors[0] == "0")
+				cout << endl << "результат: (" << result << ')' << endl;
 			else
-				cout << "ошибка: " << error << endl;
-				//cout << "-----------------------------" << "В " << strnum << " строке обнаружена ошибка!" << endl;
-				//cout << "====================ошибка ~ на " << error << " символе '" << str[error] << "'!" << endl;
-				
-			//cout << "=============================" << answer << endl;
-			///*
-			//cout << "comma: " << comma << endl;// << "аргументы:";
-			//cout << "start: " << start << endl;
-			//cout << "finish: " << finish << endl;
-			//cout << "argnum: " << argnum << endl;
-			//cout << "argint[0]" << argint[0] << endl;
-			//cout << "error: " << str[error] << endl;
-			//cout << "stoi(argnum[argint]): " << stoi(argnum[argint]) << endl;
-			//cout << "args[0]: " << args[0] << endl;
-			//*/
-
-
-
-			//////////////////////////////////////////////////////////////// ЗАЧИСТКА
-			args[0] = to_string(argnum);
-			for (argnum = 0; argnum < stoi(args[0]); argnum++) {
-				argstr[argnum] = "";
-				argint[argnum] = NULL;
-				argfloat[argnum] = NULL;
-				argbool[argnum] = NULL;
-			}
-			argnum = 0;
-			args[0] = "0";
+				for (i = 1; i < stoi(errors[0]) + 1; i++) {
+					cout << "ошибка " << i << ": " << errors[i] << endl;
+					errors[i] = "";
+				}
+			cout << endl;
+			errors[0] = "0";
+			result = "";		
 	}
 }
+
+
+
+
+
+
+
+
+
+//if (str.rfind("изрекаю", 0) == 0)
