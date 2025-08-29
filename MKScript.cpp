@@ -4,10 +4,11 @@
 #include <locale>
 #include <windows.h>
 using namespace std;
-string errors[1024], str; int i, symnum, strnum = 0; bool autoround, test = false;
+bool autoround, autospace, test = false;
+string strget, function, errors[1024], str; int i, symnum, strnum = 0;
 int argnum; string result, args[1024]; char ops[1024]; bool start, finish;
 string argstr[1024]; int argint[1024]; float argfloat[1024]; bool argbool[1024];
-string varnames[1024]; string vartypes[1024]; int vars;
+string standart[1]; string varnames[1024]; string vartypes[1024]; int vars;
 string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";//118
 void error(string reason) {
 	cout << " (ошибка) ";
@@ -369,6 +370,26 @@ bool compare(){
 		*/
 	return false;
 }
+string output() {
+	string outstr = "";
+	for (i = 1; i < argnum + 1; i++) {
+		if (autospace == true && i > 1)
+			outstr += ' ';
+		if (args[i] == "int")
+			outstr += to_string(argint[i]);
+		if (args[i] == "float")
+			outstr += to_string(argfloat[i]);
+		if (args[i] == "str")
+			outstr += argstr[i];
+		if (args[i] == "bool")
+			if (argbool[i] == true)
+				result += "тру";
+			else
+				result += "фейк";
+	}
+	return outstr;
+}
+
 int main() {
 	setlocale(LC_ALL, "");
 	SetConsoleOutputCP(1251);
@@ -377,72 +398,99 @@ int main() {
 	SetConsoleTextAttribute(hConsole, 11);
 	autoround = true;
 	test = true;
+	autospace = true;
 	while (test == true) {
 		strnum++;
-		getline(cin, str);
+		getline(cin, strget);
 		start = false;
 		finish = false;
 		errors[0] = "0";
 		argint[0] = 0;
 		argstr[0] = "";
 		argnum = 0;
+		symnum = 0;
 		ops[0] = 'F';
 		result = "";
-		cout << endl << "команда:" << endl << endl << "аргументация:" << endl;
+		function = "notset";
+		str = "";
+		if (strget[0] == ' ') {//с конца тоже удалять
+			cout << "удаление пробелов..." << endl;
+			do
+				symnum++;
+			while (symnum + 1 < strget.length() && strget[symnum + 1] == ' ');
+			if (symnum == strget.length())
+				error("строка пуста");
+			else
+				for (symnum+= 1; symnum < strget.length(); symnum++)
+					str += strget[symnum];
+			cout << "обработанная строка: " << str << endl;
+		}
+		else
+			str = strget;
+
+		
 		if (str[str.length() - 1] != ';')
 			str += ';';//УБРАТЬ
 		if (str[str.length() - 1] != ';')
 			error("неверное окончание строки");
-		else
-			for (symnum = 0; symnum < str.length() and errors[0] == "0"; symnum++) {
-				if (ops [argnum + 1] == '\0')
-				ops[argnum + 1] = 's';
+
+		if (str.rfind("изрекаю", 0) == 0)			
+			//function = "output";
+			function = "изрекаю";
+
+		if (function == "notset")
+			error("функция не задана");
+		if (errors[0] == "0") {
+			cout << endl << "функция: " << function << endl << endl << "аргументация:" << endl;
+			for (symnum = function.length(); symnum < str.length() and errors[0] == "0"; symnum++) {
+				if (ops[argnum + 1] == '\0')
+					ops[argnum + 1] = 's';
 				switch (str[symnum]) {
-					case ' ': cout << symnum << " -   - пробел" << endl; break;
-					case ',': 
-						if (argnum == 0)
-							error("перечисления не начинаются с запятой");
-						if (ops[argnum + 1] == ',')
-							error("лишняя запятая");
-						ops[argnum + 1] = ',';
-						cout << symnum << " - , - запятая" << endl;
-						break;
-					case ';': cout << symnum << " - ; - конец команды" << endl << endl; break;
-					case '-': case '+': case '*': case '/': 						
-						ops[argnum + 1] = str[symnum]; 
-						ops[0] = 'T';
-						cout << symnum << " - " << str[symnum] << " - действие задано" << endl; 
-						break;
-					case '0': readint(0); break;//сократить
-					case '1': readint(1); break;
-					case '2': readint(2); break;
-					case '3': readint(3); break;
-					case '4': readint(4); break;
-					case '5': readint(5); break;
-					case '6': readint(6); break;
-					case '7': readint(7); break;
-					case '8': readint(8); break;
-					case '9': readint(9); break;
-					case '(':
-						cout << symnum << " - ( - начало аргументации" << endl;						
-						if (start == true)
-							error("повторное начало аргументации");
-						start = true; 
-						break;
-					case ')': 
-						cout << symnum << " - ) - конец аргументации" << endl; 
-						if (finish == true)
-							error("повторный конец аргументации");
-						finish = true;
-						break;
-					case '\'': readstr(); break;
-					default:
-						if (alphabet.find(str[symnum]) != alphabet.npos)
-							readunknown();
-						else
-							error (to_string(str[symnum]));						
-						break;
-				}					
+				case ' ': cout << symnum << " -   - пробел" << endl; break;
+				case ',':
+					if (argnum == 0)
+						error("перечисления не начинаются с запятой");
+					if (ops[argnum + 1] == ',')
+						error("лишняя запятая");
+					ops[argnum + 1] = ',';
+					cout << symnum << " - , - запятая" << endl;
+					break;
+				case ';': cout << symnum << " - ; - конец команды" << endl << endl; break;
+				case '-': case '+': case '*': case '/':
+					ops[argnum + 1] = str[symnum];
+					ops[0] = 'T';
+					cout << symnum << " - " << str[symnum] << " - действие задано" << endl;
+					break;
+				case '0': readint(0); break;//сократить
+				case '1': readint(1); break;
+				case '2': readint(2); break;
+				case '3': readint(3); break;
+				case '4': readint(4); break;
+				case '5': readint(5); break;
+				case '6': readint(6); break;
+				case '7': readint(7); break;
+				case '8': readint(8); break;
+				case '9': readint(9); break;
+				case '(':
+					cout << symnum << " - ( - начало аргументации" << endl;
+					if (start == true)
+						error("повторное начало аргументации");
+					start = true;
+					break;
+				case ')':
+					cout << symnum << " - ) - конец аргументации" << endl;
+					if (finish == true)
+						error("повторный конец аргументации");
+					finish = true;
+					break;
+				case '\'': readstr(); break;
+				default:
+					if (alphabet.find(str[symnum]) != alphabet.npos)
+						readunknown();
+					else
+						error(to_string(str[symnum]));
+					break;
+				}
 			}
 			if (start == false)
 				error("нет открывающей скобки");
@@ -450,53 +498,31 @@ int main() {
 				error("нет закрывающей скобки");
 			if (argnum == 0)
 				error("аргументы отсутствуют");
-			else {
-				if (ops[0] == 'T')
-					perform();
-				for (i = 0; i < argnum + 1; i++) {
-					if (args[i] == "int")
-						result += to_string(argint[i]);
-					if (args[i] == "float")
-						result += to_string(argfloat[i]);
-					if (args[i] == "str")
-						result += argstr[i];
-					if (args[i] == "zero")
-						error("ноль");
-					if (args[i] == "bool")
-						if (argbool[i] == true)
-							result += "тру";
-						else
-							result += "фейк";
-					ops[i] = 's';
-					args[i] = "";//тут можно придумать возможное обозначение присутствия типа аргумента в предыдущей итерации
-					argstr[i] = "";
-					argint[i] = NULL;
-					argfloat[i] = NULL;
-					argbool[i] = NULL;			
-				}
-				ops[0] = 'F';
-				argnum = 0;			
-			}
-			cout << "ошибки: " << errors[0] << endl;
-			if (errors[0] == "0")
-				cout << endl << "результат: (" << result << ')' << endl;
-			else
-				for (i = 1; i < stoi(errors[0]) + 1; i++) {
-					cout << "ошибка " << i << ": " << errors[i] << endl;
-					errors[i] = "";
-				}
-			cout << endl;
-			errors[0] = "0";
-			result = "";		
+			if (ops[0] == 'T')
+				perform();
+		}
+		cout << "ошибки: " << errors[0] << endl;
+		for (i = 1; i < stoi(errors[0]) + 1; i++) {
+			cout << "ошибка " << i << ": " << errors[i] << endl;
+			errors[i] = "";
+		}
+		errors[0] = "0";
+
+
+		if (function == "output");
+			cout << endl << "вывод: " << output() << endl << endl;
+		for (i = 0; i < argnum + 1; i++) {
+			ops[i] = 's';
+			args[i] = "";
+			argstr[i] = "";
+			argint[i] = NULL;
+			argfloat[i] = NULL;
+			argbool[i] = NULL;
+		}
+		ops[0] = 'F';
+		argnum = 0;
+		
+		
+		result = "";
 	}
 }
-
-
-
-
-
-
-
-
-
-//if (str.rfind("изрекаю", 0) == 0)
