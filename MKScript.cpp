@@ -4,12 +4,15 @@
 #include <locale>
 #include <windows.h>
 using namespace std;
+
 bool autoround, autospace, test = false;
 string strget, function, errors[1024], str; int i, symnum, strnum = 0;
 int argnum; string result, args[1024]; char ops[1024]; bool start, finish;
 string argstr[1024]; int argint[1024]; float argfloat[1024]; bool argbool[1024];
-string standart[1]; string varnames[1024]; string vartypes[1024]; int vars;
+string standart[1]; string varnames[1024]; string vartypes[1024]; int vars = 0;
+string varstr[1024]; int varint[1024]; float varfloat[1024]; bool varbool[1024];
 string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";//118
+string keywords[13] = {"str", "int", "float", "bool", "unknown", "строка", "число", "дробь", "булево", "тру", "фейк", "изрекаю", "обозначим"};
 void error(string reason) {
 	cout << " (ошибка) ";
 	errors[0] = to_string(stoi(errors[0]) + 1);
@@ -128,19 +131,45 @@ void readint(int first){
 		else
 			error("нет запятой перед " + to_string(argint[argnum]));
 }
+void addvar(string name, string type) {
+	vars++;
+	varnames[vars] = name;
+	if (type == "строка") {
+		vartypes[vars] = "str";
+		varstr[vars] = "";
+		cout << endl << "переменная " << name << " записана" << endl << endl;
+	}		
+	if (type == "число") {
+		vartypes[vars] = "int";
+		varint[vars] = 0;
+		cout << endl << "переменная " << name << " записана" << endl << endl;
+	}		
+	if (type == "дробь") {
+		vartypes[vars] = "float";
+		varfloat[vars] = 0;
+		cout << endl << "переменная " << name << " записана" << endl << endl;
+	}		
+	if (type == "булево") {
+		vartypes[vars] = "bool";
+		varbool[vars] = false;
+		cout << endl << "переменная " << name << " записана" << endl << endl;
+	}
+	if (argnum > 2)
+		error("функция обозначения переменной принимает только 2 аргумента (идентификатор, тип данных)");
+}
 void readunknown() {
 	string word;
-	bool text, itsvar = false;
-	char valid[10] = { ' ', ';', ')', '-', '+', '*', '/'};
+	bool text, free = true;
+	char valid[10] = { ' ', ';', ')', '-', '+', '*', '/' };
 	argnum++;
 	args[argnum] = "unknown";
 	symnum--;
-	do {		
+	do {
 		symnum++;
 		text = true;
 		if (symnum == str.length()) {
 			text = false;
-			error ("неожиданное окончание строки");
+			error("неожиданное окончание строки");
 			symnum--;
 		}
 		if (text == false)
@@ -150,7 +179,7 @@ void readunknown() {
 			if (str[symnum] == alphabet[i]) {
 				text = true;
 				cout << symnum << " - " << str[symnum] << " - чтение неизвестного идентификатора..." << endl;
-			}	
+			}
 		if (text == true)
 			word += str[symnum];
 		else {
@@ -159,27 +188,65 @@ void readunknown() {
 					valid[0] == '1';
 			if (valid[0] == '0')
 				error("некорректная запись идентификатора");
-		}			
-	} while (text == true);
-	if (word == "тру"){ 
-		cout << "значение выявлено (тру), аргумент записан" << endl;
-		argbool[argnum] = true;
-		args[argnum] = "bool";
-	}		
-	if (word == "фейк"){ 
-		cout << "значение выявлено (фейк), аргумент записан" << endl;		
-		argbool[argnum] = false;
-		args[argnum] = "bool";
-	}
-	varnames[0] = "3";
-	varnames[1] = "счетчик";
-	varnames[2] = "флаг";
-	varnames[3] = "показатель";
-	for (i = 0; i < stoi(varnames[0]) + 1; i++)
-		if (word == varnames[i]) {
-			itsvar = true;
-			args[argnum] == "var";//!
 		}
+	} while (text == true);
+	
+
+	if (function == "обозначим") {
+		if (argnum == 1)
+			if (word != "тру" && word != "фейк") {
+				for (i = 1; i < 10; i++)
+					if (word == keywords[i])
+						free = false;
+				for (i = 1; i < vars + 1; i++)
+					if (word == varnames[i])
+						free = false;
+				if (free == false)
+					error("идентификатор зарезервирован");
+				else
+					args[1] = word;
+			}
+			else
+				error("идентификатор зарезервирован");
+		if (argnum == 2) {
+			if (word == "строка" or word == "число" or word == "дробь" or word == "булево")
+				args[2] = word;
+			else
+				error("неизвестный тип");
+		}
+		if (argnum > 2)
+			error("неверный формат обозначения переменной");
+	}
+	else {
+		if (word != "тру" && word != "фейк")
+			for (i = 1; i < 10; i++)
+				if (word == keywords[i])
+					error("идентификатор зарезервирован");
+		if (word == "тру") {
+			cout << "значение выявлено (тру), аргумент записан" << endl;
+			argbool[argnum] = true;
+			args[argnum] = "bool";
+		}
+		if (word == "фейк") {
+			cout << "значение выявлено (фейк), аргумент записан" << endl;
+			argbool[argnum] = false;
+			args[argnum] = "bool";
+		}
+		for (i = 1; i < vars; i++)
+			if (word == varnames[i]) {
+				args[argnum] = vartypes[i];
+				if (vartypes[i] == "str")
+					argstr[argnum] = varstr[i];
+				if (vartypes[i] == "int")
+					argint[argnum] = varint[i];
+				if (vartypes[i] == "float")
+					argfloat[argnum] = varfloat[i];
+				if (vartypes[i] == "bool")
+					argbool[argnum] = varbool[i];
+			}
+	}
+
+
 	if (args[argnum] == "unknown") {
 		error("неизвестное имя: " + word);
 		argnum--;
@@ -383,13 +450,13 @@ string output() {
 			outstr += argstr[i];
 		if (args[i] == "bool")
 			if (argbool[i] == true)
-				result += "тру";
+				outstr += "тру";
 			else
-				result += "фейк";
+				outstr += "фейк";
 	}
 	return outstr;
 }
-
+//гибкая функция зачистки
 int main() {
 	setlocale(LC_ALL, "");
 	SetConsoleOutputCP(1251);
@@ -428,21 +495,21 @@ int main() {
 		else
 			str = strget;
 
-		
 		if (str[str.length() - 1] != ';')
 			str += ';';//УБРАТЬ
 		if (str[str.length() - 1] != ';')
 			error("неверное окончание строки");
 
-		if (str.rfind("изрекаю", 0) == 0)			
-			//function = "output";
+		if (str.rfind("изрекаю", 0) == 0)
 			function = "изрекаю";
+		if (str.rfind("обозначим", 0) == 0)
+			function = "обозначим";
 
 		if (function == "notset")
 			error("функция не задана");
 		if (errors[0] == "0") {
 			cout << endl << "функция: " << function << endl << endl << "аргументация:" << endl;
-			for (symnum = function.length(); symnum < str.length() and errors[0] == "0"; symnum++) {
+			for (symnum = function.length(); symnum < str.length() and errors[0] == "0"; symnum++) {//вынести аргументацию в отдельную функцию
 				if (ops[argnum + 1] == '\0')
 					ops[argnum + 1] = 's';
 				switch (str[symnum]) {
@@ -501,6 +568,12 @@ int main() {
 			if (ops[0] == 'T')
 				perform();
 		}
+
+		if (function == "изрекаю")
+			cout << endl << "вывод: " << output() << endl << endl;
+		if (function == "обозначим")
+			addvar(args[1], args[2]);
+
 		cout << "ошибки: " << errors[0] << endl;
 		for (i = 1; i < stoi(errors[0]) + 1; i++) {
 			cout << "ошибка " << i << ": " << errors[i] << endl;
@@ -508,9 +581,6 @@ int main() {
 		}
 		errors[0] = "0";
 
-
-		if (function == "output");
-			cout << endl << "вывод: " << output() << endl << endl;
 		for (i = 0; i < argnum + 1; i++) {
 			ops[i] = 's';
 			args[i] = "";
