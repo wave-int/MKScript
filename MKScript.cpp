@@ -6,13 +6,13 @@
 using namespace std;
 
 bool autoround, autospace, test = false;
-string strget, function, errors[1024], str; int i, symnum, strnum = 0;
+string errors[1024], str, strget, function; bool notexplicitfunction; int i, symnum, strnum = 0;
 int argnum; string result, args[1024]; char ops[1024]; bool start, finish;
 string argstr[1024]; int argint[1024]; float argfloat[1024]; bool argbool[1024];
-string standart[1]; string varnames[1024]; string vartypes[1024]; int vars = 0;
+string standart[1]; string varnames[1024]; string vartypes[1024]; int vars = 0, vartoassign;
 string varstr[1024]; int varint[1024]; float varfloat[1024]; bool varbool[1024];
 string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";//118
-string keywords[13] = {"str", "int", "float", "bool", "unknown", "строка", "число", "дробь", "булево", "тру", "фейк", "изрекаю", "обозначим"};
+string keywords[14] = {"str", "int", "float", "bool", "unknown", "assign", "строка", "число", "дробь", "булево", "тру", "фейк", "изрекаю", "обозначим"};
 void error(string reason) {
 	cout << " (ошибка) ";
 	errors[0] = to_string(stoi(errors[0]) + 1);
@@ -157,6 +157,26 @@ void addvar(string name, string type) {
 	if (argnum > 2)
 		error("функция обозначения переменной принимает только 2 аргумента (идентификатор, тип данных)");
 }
+void assignvar(int var) {
+	//perform();
+	for (i = 1; i < argnum + 1; i++)
+	if (ops[i] == ',')
+		error("переменная может принять множество аргументов, но не значений");	
+	if (ops[1] != ':')
+		error("после идентификатора переменной нет символа присваивания ':'");
+	if (vartypes[var] != args[argnum])
+		error("типы данных не совпадают");
+	else {
+		if (vartypes[var] == "str")
+			varstr[var] = argstr[argnum];
+		if (vartypes[var] == "int")
+			varint[var] = argint[argnum];
+		if (vartypes[var] == "float")
+			varfloat[var] = argfloat[argnum];
+		if (vartypes[var] == "bool")
+			varbool[var] = argbool[argnum];
+	}
+}
 void readunknown() {
 	string word;
 	bool text, free = true;
@@ -183,7 +203,7 @@ void readunknown() {
 		if (text == true)
 			word += str[symnum];
 		else {
-			for (i = 1; i < 8; i++)
+			for (i = 1; i < 8; i++)//!
 				if (str[symnum] == valid[i])
 					valid[0] == '1';
 			if (valid[0] == '0')
@@ -195,7 +215,7 @@ void readunknown() {
 	if (function == "обозначим") {
 		if (argnum == 1)
 			if (word != "тру" && word != "фейк") {
-				for (i = 1; i < 10; i++)
+				for (i = 1; i < 14; i++)
 					if (word == keywords[i])
 						free = false;
 				for (i = 1; i < vars + 1; i++)
@@ -232,7 +252,7 @@ void readunknown() {
 			argbool[argnum] = false;
 			args[argnum] = "bool";
 		}
-		for (i = 1; i < vars; i++)
+		for (i = 1; i < vars + 1; i++)
 			if (word == varnames[i]) {
 				args[argnum] = vartypes[i];
 				if (vartypes[i] == "str")
@@ -407,6 +427,7 @@ void perform() {
 			}
 		case 's': break;
 		case ',': break;
+		case ':': break;
 		default: error("действие не задано"); break;
 		}
 		if (ops[i] == '+' or ops[i] == '-') {
@@ -466,6 +487,19 @@ int main() {
 	autoround = true;
 	test = true;
 	autospace = true;
+	notexplicitfunction = false;
+
+	vars = 3;
+	varnames[1] = "счетчик";
+	vartypes[1] = "int";
+	varint[1] = 5;
+	varnames[2] = "флаг";
+	vartypes[2] = "bool";
+	varbool[2] = true;
+	varnames[3] = "показатель";
+	vartypes[3] = "str";
+	varstr[3] = "в пределах нормы";
+	
 	while (test == true) {
 		strnum++;
 		getline(cin, strget);
@@ -502,14 +536,26 @@ int main() {
 
 		if (str.rfind("изрекаю", 0) == 0)
 			function = "изрекаю";
+
 		if (str.rfind("обозначим", 0) == 0)
 			function = "обозначим";
+
+		for (i = 1; i < vars + 1; i++)
+			if (str.rfind(varnames[i], 0) == 0) {
+				function = "assign";
+				notexplicitfunction = true;
+				vartoassign = i;
+			}
+		
+
 
 		if (function == "notset")
 			error("функция не задана");
 		if (errors[0] == "0") {
-			cout << endl << "функция: " << function << endl << endl << "аргументация:" << endl;
-			for (symnum = function.length(); symnum < str.length() and errors[0] == "0"; symnum++) {//вынести аргументацию в отдельную функцию
+			if (notexplicitfunction == true)
+				cout << endl << "функция: " << function << endl;
+			cout << endl << "аргументация:" << endl;
+/**********/for (symnum = (function == "assign" ? varnames[vartoassign].length() : function.length()); symnum < str.length() and errors[0] == "0"; symnum++) {//вынести аргументацию в отдельную функцию
 				if (ops[argnum + 1] == '\0')
 					ops[argnum + 1] = 's';
 				switch (str[symnum]) {
@@ -523,8 +569,8 @@ int main() {
 					cout << symnum << " - , - запятая" << endl;
 					break;
 				case ';': cout << symnum << " - ; - конец команды" << endl << endl; break;
-				case '-': case '+': case '*': case '/':
-					ops[argnum + 1] = str[symnum];
+				case '-': case '+': case '*': case '/': case ':':
+					ops[argnum + 1] = str[symnum];//-1
 					ops[0] = 'T';
 					cout << symnum << " - " << str[symnum] << " - действие задано" << endl;
 					break;
@@ -559,9 +605,10 @@ int main() {
 					break;
 				}
 			}
-			if (start == false)
+
+			if (start == false && notexplicitfunction == false)
 				error("нет открывающей скобки");
-			if (finish == false)
+			if (finish == false && notexplicitfunction == false)
 				error("нет закрывающей скобки");
 			if (argnum == 0)
 				error("аргументы отсутствуют");
@@ -571,9 +618,24 @@ int main() {
 
 		if (function == "изрекаю")
 			cout << endl << "вывод: " << output() << endl << endl;
-		if (function == "обозначим")
+		if (function == "обозначим" && args[1] != "unknown")
 			addvar(args[1], args[2]);
+		if (function == "assign")
+			assignvar(vartoassign);
 
+		cout << "переменные:" << endl;
+		for (i = 1; i < vars + 1; i++) {
+			cout << i << ' ' << varnames[i] << " (" << vartypes[i] << ") = ";
+			if (vartypes[i] == "str")
+				cout << '\'' << varstr[i] << '\'' << endl;
+			if (vartypes[i] == "int")
+				cout << varint[i] << endl;
+			if (vartypes[i] == "float")
+				cout << varfloat[i] << endl;
+			if (vartypes[i] == "bool")
+				cout << varbool[i] << endl;
+		}
+		cout << endl << endl;
 		cout << "ошибки: " << errors[0] << endl;
 		for (i = 1; i < stoi(errors[0]) + 1; i++) {
 			cout << "ошибка " << i << ": " << errors[i] << endl;
