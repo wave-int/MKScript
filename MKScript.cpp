@@ -4,7 +4,6 @@
 #include <locale>
 #include <windows.h>
 using namespace std;
-
 bool autoround, autospace, test = false;
 string errors[1024], str, strget, function; bool notexplicitfunction; int i, symnum, strnum = 0;
 int argnum; string result, args[1024]; char ops[1024]; bool start, finish;
