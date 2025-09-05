@@ -283,7 +283,7 @@ void readidentifier() {
 void perform() {
 	string operands;
 	int first = 1;
-	bool firstable = false;
+	bool comparison, firstable = false;
 	cout << endl << "применение математических операций к аргументам (";
 	for (i = 1; i < argnum + 1; i++) {
 		if (i > 1)
@@ -304,57 +304,126 @@ void perform() {
 	do {
 		for (i = 2; i < argnum + 1; i++) {
 			operands = args[i - 1] + args[i];
-			if (ops[i] == '*') {				
-				if (operands == "strstr" or operands == "strint" or operands == "strfloat" or operands == "strbool")
-					error("строку нельзя умножать");
-				if (operands == "intstr" or operands == "floatstr" or operands == "boolstr")
-					error("на строку нельзя умножать");
-				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")
-					error("математические действия не применимы к двоичному значению");
-				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
-					error("математические действия не применимы к двоичному значению");
-				if (operands == "intfloat" or operands == "floatint") {
-					argfloat[i - 1] += argint[i - 1];
-					argfloat[1] += argint[1];
-					argfloat[i] *= argfloat[i - 1];
-					args[i] = "float";
+			if (ops[i] == '*') {	
+				if (operands == "strstr")
+					error("строки нельзя перемножать");
+				if (operands == "strint") {
+					args[i] = "str";
+					argstr[i] = "";
+					for (argint[i]; argint[i] > 0; argint[i]--)
+						argstr[i] += argstr[i - 1];
+				}
+				if (operands == "strfloat")
+					error("строку нельзя умножить на дробь");
+				if (operands == "strbool") {
+					args[i] = "str";
+					argstr[i] = "";
+					if (argbool[i] == true)
+						argstr[i] = argstr[i - 1];
+				}
+				if (operands == "intstr") {
+					argstr[i - 1] = "";
+					for (argint[i - 1]; argint[i - 1] > 0; argint[i - 1]--)
+						argstr[i - 1] += argstr[i];
+					argstr[i] = argstr[i - 1];
 				}
 				if (operands == "intint")
 					argint[i] *= argint[i - 1];
+				if (operands == "intfloat")
+					argfloat[i] *= argint[i - 1];
+				if (operands == "intbool") {
+					args[i] = "int";
+					argint[i] = argint[i - 1] * argbool[i];
+				}
+				if (operands == "floatstr")
+					error("дробь нельзя умножить на строку");
+				if (operands == "floatint") {
+					args[i] = "float";
+					argfloat[i] = argfloat[i - 1] * argint[i];
+				}
 				if (operands == "floatfloat")
 					argfloat[i] *= argfloat[i - 1];
+				if (operands == "floatbool") {
+					args[i] = "float";
+					argfloat[i] = argfloat[i - 1] * argbool[i];
+				}
+				if (operands == "boolstr")
+					if (argbool[i - 1] == false)
+						argstr[i] = "";
+				if (operands == "boolint")
+					argint[i] *= argbool[i - 1];
+				if (operands == "boolfloat")
+					argfloat[i] *= argbool[i - 1];
+				if (operands == "boolbool")
+					argbool[i] *= argbool[i - 1];
 			}
 			if (ops[i] == '/') {
-				if (operands == "strstr" or operands == "strint" or operands == "strfloat" or operands == "strbool")
-					error("строку нельзя делить");
-				if (operands == "intstr" or operands == "floatstr" or operands == "boolstr")
-					error("на строку нельзя делить");
-				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")
-					error("математические действия не применимы к двоичному значению");
-				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
-					error("математические действия не применимы к двоичному значению");
-				if (operands == "intfloat" or operands == "floatint") {
-					argfloat[i - 1] += argint[i - 1];
-					argfloat[i] += argint[i];
+				if (operands == "strstr")
+					error("строки нельзя делить");
+				if (operands == "strint") {
+					if (argint[i] > argstr[i - 1].length())
+						error(to_string(argint[i]) + " превышает количество символов в '" + argstr[i - 1] + '\'');
+					else
+						if (argint[i] == 0)
+							error("на ноль делить нельзя");
+						else {
+							args[i] = "str";
+							argstr[i] = "";
+							for (symnum = 0; symnum < floor(argstr[i - 1].length() / argint[i]); symnum++)
+								argstr[i] += argstr[i - 1][symnum];
+						}	
+				}
+				if (operands == "strfloat")
+					error("строку нельзя делить на дробь");
+				if (operands == "strbool")
+					error("строку нельзя делить на булево");
+				if (operands == "intstr")
+					error("нельзя делить на строку");
+					if (operands == "intint")
+						if (argint[i] != 0)
+							if (autoround == true)
+								argint[i] = argint[i - 1] / argint[i];
+							else {
+								args[i - 1] = "float";
+								args[i] = "float";
+								argfloat[i - 1] = argint[i - 1];
+								argfloat[i] = argint[i];
+								argfloat[i] = argfloat[i - 1] / argfloat[i];
+							}
+						else
+							error("на ноль делить нельзя");
+				if (operands == "intfloat"){
+					if (argfloat[i] != 0)
+						argfloat[i] = argint[i - 1] / argfloat[i];
+					else
+						error("на ноль делить нельзя");
+				}
+				if (operands == "intbool")
+					error("нельзя делить на булево");
+				if (operands == "floatstr")
+					error("нельзя делить на строку");
+				if (operands == "floatint")
+					if (argint[i] != 0) {
+						args[i] = "float";
+						argfloat[i] = argfloat[i - 1] / argint[i];
+					}
+					else
+						error("на ноль делить нельзя");
+				if (operands == "floatfloat")
 					if (argfloat[i] != 0)
 						argfloat[i] = argfloat[i - 1] / argfloat[i];
 					else
 						error("на ноль делить нельзя");
-					args[i] = "float";
-				}
-				if (operands == "intint")
-					if (argint[i] != 0)
-						if (autoround == true)
-							argint[i] = argint[i - 1] / argint[i];
-						else {
-							args[i - 1] = "float";
-							args[i] = "float";
-							argfloat[i - 1] = argint[i - 1];
-							argfloat[i] = argint[i];
-							argfloat[i] = argfloat[i - 1] / argfloat[i];
-						}
-					else
-						error("на ноль делить нельзя");	
+				if (operands == "floatbool")
+					error("нельзя делить на булево");
+				if (operands == "boolstr")
+					error("нельзя делить на строку");
+				if (operands == "boolint")
+					error("булево неделимо");
+				if (operands == "boolfloat")
+					error("булево неделимо");
+				if (operands == "boolbool")
+					error("булево неделимо");					
 			}
 			if (ops[i] == '*' or ops[i] == '/') {
 				first++;
@@ -379,60 +448,135 @@ void perform() {
 	for (i = first + 1; i < argnum + 1; i++){
 		operands = args[i - 1] + args[i];
 		switch (ops[i]) {
-			case '-': {
-				if (operands == "strstr" or operands == "strint" or operands == "strfloat" or operands == "strbool")
-					error("из строки нельзя вычитать");
-				if (operands == "intstr" or operands == "floatstr" or operands == "boolstr")
-					error("нельзя вычесть строку");
-				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")// упорядочить
-					error("математические действия не применимы к двоичному значению");
-				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
-					error("математические действия не применимы к двоичному значению");
-				if (operands == "intfloat" or operands == "floatint") {
-					argfloat[i - 1] += argint[i - 1];
-					argfloat[1] += argint[1];
-					argfloat[i] = argfloat[i - 1] - argfloat[i];
-					args[i] = "float";
-				}
+			case '-':{
+				if (operands == "strstr")
+					if (argstr[i - 1].find(argstr[i]) == string::npos)
+						error('\'' + argstr[i - 1] + "' не содержит '" + argstr[i] + '\'');
+					else
+						argstr[i] = argstr[i - 1].erase(argstr[i - 1].find(argstr[i]), argstr[i].length());
+				if (operands == "strint")
+					if (argint[i] > argstr[i - 1].length())
+						error("число не должно привышать длину строки");
+					else{
+						args[i] = "str";
+						argstr[i] = "";
+						for (symnum = 0; symnum < argstr[i - 1].length() - argint[i]; symnum++)
+							argstr[i] += argstr[i - 1][symnum];
+					}
+				if (operands == "strfloat")
+					error("из строки нельзя вычесть дробное число символов");
+				if (operands == "strbool")
+					if (argstr[i - 1].find("тру") == string::npos && argstr[i - 1].find("фейк") == string::npos)
+						error("в строке '" + argstr[i - 1] + "' нет булевых значений");
+					else {
+						args[i] = "str";
+						argstr[i] = argstr[i - 1];
+						if (argbool[i] == true)
+							if (argstr[i - 1].find("тру") != string::npos)
+								argstr[i] = argstr[i - 1].erase(argstr[i - 1].find("тру"), 3);							
+						if (argbool[i] == false)
+							if (argstr[i - 1].find("фейк") != string::npos)
+								argstr[i] = argstr[i - 1].erase(argstr[i - 1].find("фейк"), 4);							
+					}					
+				if (operands == "intstr")
+					error("нельзя вычесть строку из числа");
 				if (operands == "intint")
 					argint[i] = argint[i - 1] - argint[i];
+				if (operands == "intfloat")
+					argfloat[i] = argint[i - 1] - argfloat[i];
+				if (operands == "intbool") {
+					args[i] = "int";
+					argint[i] = argint[i - 1] - argbool[i];
+				}
+				if (operands == "floatstr")
+					error("нельзя вычесть строку из дроби");
+				if (operands == "floatint") {
+					args[i] = "float";
+					argfloat[i] = argfloat[i - 1] - argint[i];
+				}
 				if (operands == "floatfloat")
 					argfloat[i] = argfloat[i - 1] - argfloat[i];
+				if (operands == "floatbool") {
+					args[i] = "float";
+					argfloat[i] = argfloat[i - 1] - argbool[i];
+				}
+				if (operands == "boolstr")
+					error("нельзя вычесть строку из булева");
+				if (operands == "boolint")
+					argint[i] = argbool[i - 1] - argint[i];
+				if (operands == "boolfloat")
+					argfloat[i] = argbool[i - 1] - argfloat[i];
+				if (operands == "boolbool") 
+					if (argbool[i - 1] == true and argbool[i] == false)
+						argbool[i] = true;
+					else
+						argbool[i] = false;
 				break;
-			}			
+			}
 			case '+': {
-				if (operands == "strbool" or operands == "intbool" or operands == "floatbool")
-					error("математические действия не применимы к двоичному значению");
-				if (operands == "boolstr" or operands == "boolint" or operands == "boolfloat" or operands == "boolbool")
-					error("математические действия не применимы к двоичному значению");
 				if (operands == "strstr")
 					argstr[i] = argstr[i - 1] + argstr[i];
-				if (operands == "strint")
-					argstr[i] = argstr[i - 1] + to_string(argint[i]);
-				if (operands == "strfloat")
-					argstr[i] = argstr[i - 1] + to_string(argfloat[i]);
-				if (operands == "strint" or operands == "strfloat")
+				if (operands == "strint") {
 					args[i] = "str";
+					argstr[i] = argstr[i - 1] + to_string(argint[i]);
+				}					
+				if (operands == "strfloat") {
+					args[i] = "str";
+					argstr[i] = argstr[i - 1] + to_string(argfloat[i]);
+				}
+				if (operands == "strbool") {
+					args[i] = "str";
+					if (argbool[i] == true)
+						argstr[i] = argstr[i - 1] + "тру";
+					if (argbool[i] == false)
+						argstr[i] = argstr[i - 1] + "фейк";
+				}	
 				if (operands == "intstr")
 					argstr[i] = to_string(argint[i - 1]) + argstr[i];
 				if (operands == "intint")
 					argint[i] += argint[i - 1];
-				if (operands == "intfloat" or operands == "floatint") {
-					argfloat[i - 1] += argint[i - 1];
-					argfloat[1] += argint[1];
-					argfloat[i] += argfloat[i - 1];
-					args[i] = "float";
+				if (operands == "intfloat")
+					argfloat[i] += argint[i - 1];
+				if (operands == "intbool") {
+					args[i] = "int";
+					argint[i] = argint[i - 1] + argbool[i];
 				}
 				if (operands == "floatstr")
 					argstr[i] = to_string(argfloat[i - 1]) + argstr[i];
+				if (operands == "floatint") {
+					args[i] = "float";
+					argfloat[i] = argfloat[i - 1] + argint[i];
+				}
 				if (operands == "floatfloat")
 					argfloat[i] += argfloat[i - 1];
+				if (operands == "floatbool") {
+					args[i] = "float";
+					argfloat[i] = argfloat[i - 1] + argbool[i];
+				}
+				if (operands == "boolstr")
+					if (argbool[i - 1] == true)
+						argstr[i] = "тру" + argstr[i];
+					else
+						argstr[i] = "фейк" + argstr[i];				
+				if (operands == "boolint")
+					argint[i] += argbool[i - 1];
+				if (operands == "boolfloat")
+					argfloat[i] += argbool[i - 1];
+				if (operands == "boolbool")
+					argbool[i] += argbool[i - 1];
 				break;
-			}
-		case 's': break;
-		case ',': break;
-		case ':': break;
-		default: error("действие не задано"); break;
+			}	
+			case '~': comparison = true;
+			case '=': comparison = true;
+			case '?': comparison = true;
+			case '!': comparison = true;
+			case '<': comparison = true;
+			case '>': comparison = true;
+			case '{': comparison = true;
+			case '}': comparison = true;
+			case '"': comparison = true;
+			case 's': case ',': case ':': break;
+			default: error("действие не задано"); break;
 		}
 		if (ops[i] == '+' or ops[i] == '-') {
 			first++;
@@ -592,8 +736,13 @@ int main() {
 			str += ';';//УБРАТЬ
 		if (str[str.length() - 1] != ';')
 			error("неверное окончание строки");
+		 
 
-
+		if (str[0] == 'w') {
+			str = "изрекаю";
+			for (symnum = 1; symnum < strget.length(); symnum++)
+				str += strget[symnum];
+		}	
 		if (str.rfind("изрекаю", 0) == 0) {
 			function = "изрекаю";
 			cout << endl << "функция: изрекаю" << endl;
@@ -601,8 +750,7 @@ int main() {
 			if (ops[0] == 'T')
 				perform();
 			cout << endl << "вывод: " << output() << endl;
-		}
-			
+		}			
 		if (str.rfind("обозначим", 0) == 0) {
 			function = "обозначим";
 			cout << endl << "функция: обозначим" << endl;
@@ -610,8 +758,7 @@ int main() {
 			if (args[1] != "unknown")
 				if (args[2] == "строка" or args[2] == "число" or args[2] == "дробь" or args[2] == "булево")
 					addvar(args[1], args[2]);
-		}
-			
+		}			
 		for (i = 1; i < vars + 1; i++)
 			if (str.rfind(varnames[i], 0) == 0) {
 				function = "assign";
@@ -624,7 +771,6 @@ int main() {
 
 		if (function == "notset")
 			error("функция не задана");	
-
 		cout << endl << "переменные:" << endl;
 		for (i = 1; i < vars + 1; i++) {
 			cout << i << ' ' << varnames[i] << " (" << vartypes[i] << ") = ";
