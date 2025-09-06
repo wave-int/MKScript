@@ -9,7 +9,7 @@ bool autoround = true, autospace = true, test = true;
 
 string errors[1024], str, strget, function; int i, symnum, strnum;
 
-string result, args[1024]; int argnum; char ops[1024]; bool start, finish;
+string result, args[1024]; int argnum; char ops[1024], comparison; bool start, finish;
 
 string argstr[1024]; int argint[1024]; float argfloat[1024]; bool argbool[1024];
 
@@ -283,7 +283,7 @@ void readidentifier() {
 void perform() {
 	string operands;
 	int first = 1;
-	bool comparison, firstable = false;
+	bool firstable = false;
 	cout << endl << "применение математических операций к аргументам (";
 	for (i = 1; i < argnum + 1; i++) {
 		if (i > 1)
@@ -566,16 +566,14 @@ void perform() {
 					argbool[i] += argbool[i - 1];
 				break;
 			}	
-			case '~': comparison = true;
-			case '=': comparison = true;
-			case '?': comparison = true;
-			case '!': comparison = true;
-			case '<': comparison = true;
-			case '>': comparison = true;
-			case '{': comparison = true;
-			case '}': comparison = true;
-			case '"': comparison = true;
 			case 's': case ',': case ':': break;
+			case '!': case '=': case '<': case '>':
+			case '{': case '}': case '"': case '~':  case '?':
+				if (comparison == '\0')
+					comparison = ops[i];
+				else
+					error("вид сравнения уже задан");
+				break;
 			default: error("действие не задано"); break;
 		}
 		if (ops[i] == '+' or ops[i] == '-') {
@@ -595,15 +593,89 @@ void perform() {
 		}		
 	}	
 }
-bool compare(){
-	/*
-		switch () {
-			case '=': break;
-			case '>': break;
-			case '<': break;
-			case '!': break;
+bool compare(string left, char type, string right){
+	//cout << "левое значение:" << left << endl;
+	cout << "вид сравнения: " << type << endl;
+	//cout << "правое значение:" << right << endl;
+	cout << "результат: ";
+	if (left == "str" and right == "str")
+		switch (type) {
+			case '!':
+				if (argstr[1].length() != argstr[2].length())
+					return true;
+				break;
+			case '=': 
+				if (argstr[1].length() == argstr[2].length())
+					return true;
+				break;
+			case '<':
+				if (argstr[1].length() < argstr[2].length())
+					return true;
+				break;
+			case '>':
+				if (argstr[1].length() > argstr[2].length())
+					return true;
+				break;
+		}	
+	if (left == "int" and right == "int")
+		switch (type) {
+		case '!':
+			if (argint[1] != argint[2])
+				return true;
+			break;
+		case '=':
+			if (argint[1] == argint[2])
+				return true;
+			break;
+		case '<':
+			if (argint[1] < argint[2])
+				return true;
+			break;
+		case '>':
+			if (argint[1] > argint[2])
+				return true;
+			break;
 		}
-		*/
+	if (left == "float" and right == "float")
+		switch (type) {
+		case '!':
+			if (argfloat[1] != argfloat[2])
+				return true;
+			break;
+		case '=':
+			if (argfloat[1] == argfloat[2])
+				return true;
+			break;
+		case '<':
+			if (argfloat[1] < argfloat[2])
+				return true;
+			break;
+		case '>':
+			if (argfloat[1] > argfloat[2])
+				return true;
+			break;
+		}
+	if (left == "bool" and right == "bool")
+		switch (type) {
+		case '!':
+			if (argbool[1] != argbool[2])
+				return true;
+			break;
+		case '=':
+			if (argbool[1] == argbool[2])
+				return true;
+			break;
+		case '<':
+			if (argbool[1] < argbool[2])
+				return true;
+			break;
+		case '>':
+			if (argbool[1] > argbool[2])
+				return true;
+			break;
+		}
+	if (left != right)
+		cout << "(конфликт типов) " << endl;
 	return false;
 }
 
@@ -645,6 +717,8 @@ void getargs(bool parenthesized, int min, int max) {
 				cout << symnum << " - , - запятая" << endl;
 				break;
 			case ';': cout << symnum << " - ; - конец команды" << endl << endl; break;
+			case '!': case '=': case '<': case '>': case '~':
+			case '{': case '}': case '"': case '&': case '?':
 			case '-': case '+': case '*': case '/': case ':':
 				ops[argnum + 1] = str[symnum];//-1
 				ops[0] = 'T';
@@ -714,6 +788,7 @@ int main() {
 		argnum = 0;
 		symnum = 0;
 		ops[0] = 'F';
+		comparison = '\0';
 		result = "";
 		function = "notset";
 		str = "";
@@ -759,6 +834,53 @@ int main() {
 				if (args[2] == "строка" or args[2] == "число" or args[2] == "дробь" or args[2] == "булево")
 					addvar(args[1], args[2]);
 		}			
+		if (str.rfind("а вдруг", 0) == 0) {
+			function = "а вдруг";
+			cout << endl << "функция: сравнивание" << endl;			
+			getargs(true, 2, 0);
+			if (ops[0] == 'T')
+				perform();
+			for (i = 1; argnum; i++) {
+				if (ops[i + 1] == ',')
+					error("перечисления недопустимы в условиях");
+				if (args[i] == "str") {
+					args[1] = "str";
+					argstr[1] = argstr[i];
+					break;
+				}
+				if (args[i] == "int") {
+					args[1] = "int";
+					argint[1] = argint[i];
+					break;
+				}
+				if (args[i] == "float") {
+					args[1] = "float";
+					argfloat[1] = argfloat[i];
+					break;
+				}
+				if (args[i] == "bool") {
+					args[1] = "bool";
+					argbool[1] = argbool[i];
+					break;
+				}
+			}
+			args[2] = args[argnum];
+			if (args[2] == "str")
+				argstr[2] == argstr[argnum];
+			if (args[2] == "int")
+				argint[2] == argint[argnum];
+			if (args[2] == "float")
+				argfloat[2] == argfloat[argnum];
+			if (args[2] == "bool")
+				argbool[2] == argbool[argnum];			
+			if (errors[0] != "0")
+				cout << "ошибка" << endl;
+			else
+				if (compare(args[1], comparison, args[2]) == true)
+					cout << "тру" << endl;
+				else
+					cout << "фейк" << endl;
+		}
 		for (i = 1; i < vars + 1; i++)
 			if (str.rfind(varnames[i], 0) == 0) {
 				function = "assign";
