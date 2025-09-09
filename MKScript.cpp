@@ -331,6 +331,64 @@ void perform() {
 		}
 		cout << ')' << endl << endl;
 	}
+	for (i = 2; i < argnum + 1; i++) {
+		operands = args[i - 1] + args[i];
+		if (ops[i] == '^') {
+			if (operands == "strstr")
+				error("возведение в степень не применимо к строкам");
+			if (operands == "strint") 
+				error("возведение в степень не применимо к строкам");
+			if (operands == "strfloat")
+				error("возведение в степень не применимо к строкам");
+			if (operands == "strbool")
+				error("возведение в степень не применимо к строкам");
+
+			if (operands == "intstr")
+				error("строка не может быть степенью");
+			if (operands == "intint")
+				argint[i] = pow(argint[i - 1], argint[i]);
+			if (operands == "intfloat")
+				argfloat[i] = pow(argint[i - 1], argfloat[i]);
+			if (operands == "intbool")
+				error("возведение в степень не применимо к булевым ");
+
+			if (operands == "floatstr")
+				error("строка не может быть степенью");
+			if (operands == "floatint") {
+				args[i] = "float";
+				argfloat[i] = pow(argfloat[i - 1], argint[i]);
+			}
+			if (operands == "floatfloat")
+				argfloat[i] = pow(argfloat[i - 1], argfloat[i]);
+			if (operands == "floatbool")
+				error("возведение в степень не применимо к булевым ");
+
+			if (operands == "boolstr")
+				error("возведение в степень не применимо к булевым ");
+			if (operands == "boolint")
+				error("возведение в степень не применимо к булевым ");
+			if (operands == "boolfloat")
+				error("возведение в степень не применимо к булевым ");
+			if (operands == "boolbool")
+				error("возведение в степень не применимо к булевым ");
+
+			if (ops[i] == '^') {
+				first++;
+				while (i > first) {
+					ops[i] = ops[i - 1];
+					i--;
+					args[i] = args[i - 1];
+					argstr[i] = argstr[i - 1];
+					argint[i] = argint[i - 1];
+					argfloat[i] = argfloat[i - 1];
+					argbool[i] = argbool[i - 1];
+				}
+				args[first - 1] = "skip";
+				ops[first] = 's';
+				i = first;
+			}
+		}
+	}
 	do {
 		for (i = 2; i < argnum + 1; i++) {
 			operands = args[i - 1] + args[i];
@@ -597,7 +655,7 @@ void perform() {
 				break;
 			}	
 			case 's': case ',': case ':': break;
-			case '!': case '=': case '<': case '>':
+			case '!': case '=': case '<': case '>': 
 			case '{': case '}': case '"': case '~':  case '?':
 				if (comparison == '\0')
 					comparison = ops[i];
@@ -816,7 +874,7 @@ void getargs(bool parenthesized, int min, int max) {
 				break;
 			case '!': case '=': case '<': case '>': case '~':
 			case '{': case '}': case '"': case '&': case '?':
-			case '-': case '+': case '*': case '/': case ':':
+			case '-': case '+': case '*': case '^': case '/': case ':':
 				ops[argnum + 1] = str[symnum];//-1
 				ops[0] = 'T';
 				if (test == true)
@@ -848,10 +906,6 @@ void getargs(bool parenthesized, int min, int max) {
 				break;
 		}
 	}
-
-
-	
-
 
 	if (parenthesized == true){
 		if (start == false)
