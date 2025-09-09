@@ -19,7 +19,7 @@ string varnames[1024]; string vartypes[1024]; int vars = 0, selectedvar;
 string varstr[1024]; int varint[1024]; float varfloat[1024]; bool varbool[1024];
 
 string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\n";//118
-string keywords[14] = {"str", "int", "float", "bool", "unknown", "assign", "строка", "число", "дробь", "булево", "тру", "фейк", "изрекаю", "обозначим"};
+string keywords[15] = {"skip", "str", "int", "float", "bool", "unknown", "assign", "строка", "число", "дробь", "булево", "тру", "фейк", "изрекаю", "обозначим"};
 
 void error(string reason) {
 	if (test == true)
@@ -242,7 +242,7 @@ void readidentifier() {
 	if (function == "обозначим") {
 		if (argnum == 1)
 			if (identifier != "тру" && identifier != "фейк") {
-				for (i = 1; i < 14; i++)
+				for (i = 1; i < 15; i++)
 					if (identifier == keywords[i])
 						free = false;
 				for (i = 1; i < vars + 1; i++)
@@ -282,17 +282,20 @@ void readidentifier() {
 			args[argnum] = "bool";
 		}
 		for (i = 1; i < vars + 1; i++)
-			if (identifier == varnames[i]) {
-				args[argnum] = vartypes[i];
-				if (vartypes[i] == "str")
-					argstr[argnum] = varstr[i];
-				if (vartypes[i] == "int")
-					argint[argnum] = varint[i];
-				if (vartypes[i] == "float")
-					argfloat[argnum] = varfloat[i];
-				if (vartypes[i] == "bool")
-					argbool[argnum] = varbool[i];
-			}
+			if (identifier == varnames[i])
+				if (function == "спросить")
+					args[argnum] = identifier;
+				else{
+					args[argnum] = vartypes[i];
+					if (vartypes[i] == "str")
+						argstr[argnum] = varstr[i];
+					if (vartypes[i] == "int")
+						argint[argnum] = varint[i];
+					if (vartypes[i] == "float")
+						argfloat[argnum] = varfloat[i];
+					if (vartypes[i] == "bool")
+						argbool[argnum] = varbool[i];
+				}
 	}
 	if (args[argnum] == "unknown") {
 		error("неизвестное имя: " + identifier);
@@ -708,6 +711,28 @@ bool compare(string left, char type, string right){//перегрузить
 	return false;
 }
 
+string askstr(int var) {
+	string value;
+	//recognize (value)
+	cin >> value;
+	return value;
+}
+int askint(int var) {
+	int value;
+	//recognize (value)
+	cin >> value;
+	return value;
+}
+float askfloat(int var) {
+	float value;
+	//recognize (value)
+	cin >> value;
+	//for (symnum = 0; symnum < value.length() + 1; symnum++)
+		//if (value[symnum] == '.')
+			//value[symnum] = ',';
+	return value;
+}
+
 string output() {
 	string outstr = "";
 	for (i = 1; i < argnum + 1; i++) {
@@ -727,7 +752,31 @@ string output() {
 	}
 	return outstr;
 }
-
+string recognize(string literal) {
+	if (literal == "тру" or literal == "фейк")
+		return "bool";
+	for (i = 1; i < vars + 1; i++)
+		if (literal == varnames[i])
+			return "var";
+	switch (literal[0]){
+		case '\'':
+			if (literal[literal.length()] == '\'')
+				for (symnum = 0; symnum < literal.length(); symnum++)
+					if (literal[symnum] == '\'' or literal[symnum] == '\t' or literal[symnum] == '\n' or literal[symnum] == '\0' or literal[symnum] == '|')
+						return "incorrect";			
+			return "str";
+		case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+			for (symnum = 0; symnum < literal.length(); symnum++)
+				switch (literal[symnum]) {
+					case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+						break;
+					default: return "incorrect";
+				}
+			return "int";
+		default: return "incorrect";
+	}	
+	return "incorrect";
+}
 bool afterargs() {
 	string end = "";
 	for (symnum += 1; symnum < str.length(); symnum++)
@@ -886,11 +935,11 @@ int main() {
 			if (ops[0] == 'T')
 				perform();
 			if (test == true)
-				cout << endl << "вывод: " << output() << endl;
-			else {
-				print[0] = to_string(stoi(print[0]) + 1);
-				print[stoi(print[0])] = output();
-			}
+				cout << endl << "вывод: ";
+			//cout << output() << endl;
+			print[0] = to_string(stoi(print[0]) + 1);
+			print[stoi(print[0])] = output();
+			
 				
 		}			
 		if (str.rfind("обозначим", 0) == 0) {
@@ -963,6 +1012,21 @@ int main() {
 					perform();
 				assignvar(selectedvar);
 			}
+		if (str.rfind("спросить", 0) == 0) {
+			function = "спросить";
+			getargs(false, 1, 1);
+			for (i = 1; i < vars + 1; i++)
+				if (args[1] == varnames[i])
+					selectedvar = i;
+			if (vartypes[selectedvar] == "str")
+				varstr[selectedvar] = askstr(selectedvar);
+			if (vartypes[selectedvar] == "int")
+				varint[selectedvar] = askint(selectedvar);
+			if (vartypes[selectedvar] == "float")
+				varfloat[selectedvar] = askfloat(selectedvar);
+			if (vartypes[selectedvar] == "bool")
+				error("нельзя вводить двоичные данные");
+		}
 		if (function == "notset")
 			error("функция не задана");	
 		if (test == true) {
@@ -984,6 +1048,7 @@ int main() {
 		}
 		clean();
 	}	
+
 	if (errors[0] == "0")
 		for (i = 1; i < stoi(print[0]) + 1; i++)
 			cout << print[i] << endl;
