@@ -780,27 +780,85 @@ bool compare(string left, char type, string right){//перегрузить
 	return false;
 }
 
-string askstr(int var) {
+bool checkmatch(string literal, string type) {//getargs()
+	bool point = false;
+	if (type == "str") {
+		for (symnum = 0; symnum < literal.length(); symnum++)
+			if (literal[symnum] == '\t' or literal[symnum] == '\n' or literal[symnum] == '\0' or literal[symnum] == '|')
+				return false;
+		return true;
+	}
+	if (type == "int") {
+		for (symnum = 0; symnum < literal.length(); symnum++)
+			switch (literal[symnum]) {
+				case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+					break;
+				default:
+					return false;
+			}
+		return true;
+	}
+	if (type == "float") {
+		for (symnum = 0; symnum < literal.length(); symnum++)
+			switch (literal[symnum]) {
+				case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+					break;
+				case '.': case ',':
+					if (point == false)
+						point = true;
+					else
+						return false;
+					break;
+				default:
+					return false;
+			}
+		//if (point == true)
+			return true;
+		//else
+			return false;
+	}
+	return false;
+}
+void askvar(int var){	
 	string value;
-	//recognize (value)
-	cin >> value;
-	return value;
+	getline(cin, value);
+
+	//string valuestr;
+	//int valueint;
+	//float valuefloat;
+	//if (vartypes[var] == "str")
+		//getline(cin, valuestr);
+	//if (vartypes[var] == "int")
+		//cin >> valueint;
+	//if (vartypes[var] == "float")
+		//cin >> valuefloat;
+
+	if (checkmatch(value, vartypes[var]) == true) {
+		if (vartypes[var] == "str")
+			varstr[var] = value;
+		if (vartypes[var] == "int")
+			varint[var] = stoi(value);
+		if (vartypes[var] == "float")
+			varfloat[var] = stof(value);
+	}
+	else
+		cout << "ошибка ввода: конфликт типов данных" << endl;
 }
-int askint(int var) {
-	int value;
-	//recognize (value)
-	cin >> value;
-	return value;
+void askvar(int var, string mistake) {
+	string value;
+	getline(cin, value);
+	if (checkmatch(value, vartypes[var]) == true) {
+		if (vartypes[var] == "str")
+			varstr[var] = value;
+		if (vartypes[var] == "int")
+			varint[var] = stoi(value);
+		if (vartypes[var] == "float")
+			varfloat[var] = stof(value);
+	}
+	else
+		cout << mistake << endl;
 }
-float askfloat(int var) {
-	float value;
-	//recognize (value)
-	cin >> value;
-	//for (symnum = 0; symnum < value.length() + 1; symnum++)
-		//if (value[symnum] == '.')
-			//value[symnum] = ',';
-	return value;
-}
+
 
 string output() {
 	string outstr = "";
@@ -821,31 +879,7 @@ string output() {
 	}
 	return outstr;
 }
-string recognize(string literal) {
-	if (literal == "тру" or literal == "фейк")
-		return "bool";
-	for (i = 1; i < vars + 1; i++)
-		if (literal == varnames[i])
-			return "var";
-	switch (literal[0]){
-		case '\'':
-			if (literal[literal.length()] == '\'')
-				for (symnum = 0; symnum < literal.length(); symnum++)
-					if (literal[symnum] == '\'' or literal[symnum] == '\t' or literal[symnum] == '\n' or literal[symnum] == '\0' or literal[symnum] == '|')
-						return "incorrect";			
-			return "str";
-		case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
-			for (symnum = 0; symnum < literal.length(); symnum++)
-				switch (literal[symnum]) {
-					case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
-						break;
-					default: return "incorrect";
-				}
-			return "int";
-		default: return "incorrect";
-	}	
-	return "incorrect";
-}
+
 bool afterargs() {
 	string end = "";
 	for (symnum += 1; symnum < str.length(); symnum++)
@@ -1104,18 +1138,18 @@ int main() {
 			}
 		if (str.rfind("спросить", 0) == 0) {
 			function = "спросить";
-			getargs(false, 1, 1);
-			for (i = 1; i < vars + 1; i++)
+			getargs(false, 1, 2);
+			for (i = 1; i < vars + 2; i++)
 				if (args[1] == varnames[i])
-					selectedvar = i;
-			if (vartypes[selectedvar] == "str")
-				varstr[selectedvar] = askstr(selectedvar);
-			if (vartypes[selectedvar] == "int")
-				varint[selectedvar] = askint(selectedvar);
-			if (vartypes[selectedvar] == "float")
-				varfloat[selectedvar] = askfloat(selectedvar);
-			if (vartypes[selectedvar] == "bool")
-				error("нельзя вводить двоичные данные");
+					break;
+			if (i < vars + 1) {
+				if (argnum == 1)
+					askvar(i);
+				if (argnum == 2)
+					askvar(i, argstr[2]);
+				//error("нельзя вводить двоичные данные");
+			}
+			
 		}
 		if (function == "notset")
 			error("функция не задана");	
