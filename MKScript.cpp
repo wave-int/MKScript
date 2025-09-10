@@ -10,7 +10,7 @@ bool autoround = true, autospace = true, test = false;
 
 bool skip; string errors[1024], str, strget, function; int i, symnum, strnum;
 
-string print[1024], args[1024]; int argnum; char ops[1024], comparison; bool start, finish;
+string print[1024], args[1024]; int argnum; char ops[1024], comparison;
 
 string argstr[1024]; int argint[1024]; float argfloat[1024]; bool argbool[1024];
 
@@ -145,7 +145,7 @@ void readfloat(int first) {
 	symnum--;
 	precision /= 10;
 }
-void readint(int first){ 
+void readint(int first){
 	bool notint = false, zero = false;
 	argint[0] = 1;
 	argnum++;
@@ -345,8 +345,19 @@ void perform() {
 
 			if (operands == "intstr")
 				error("строка не может быть степенью");
-			if (operands == "intint")
-				argint[i] = pow(argint[i - 1], argint[i]);
+			if (operands == "intint") {
+				if (argint[i] < 0) {
+					args[i] = "float";
+					argfloat[i] = pow(argint[i - 1], argint[i]);
+				}
+				else
+					if (argint[i] == 0)
+						argint[i] = 1;
+					else
+						//if (argint[i] > 0)
+							argint[i] = pow(argint[i - 1], argint[i]);
+			}
+				
 			if (operands == "intfloat")
 				argfloat[i] = pow(argint[i - 1], argfloat[i]);
 			if (operands == "intbool")
@@ -847,8 +858,9 @@ bool afterargs() {
 	return true;
 }
 void getargs(bool parenthesized, int min, int max) {
-	start = false;
-	finish = false;
+	bool start = false;
+	bool finish = false;
+	bool negative = false;
 	if (test == true)
 		cout << endl << "аргументация:" << endl;
 	for (symnum = (function == "assign" ? varnames[selectedvar].length() : function.length()); symnum < str.length() and errors[0] == "0"; symnum++) {//вынести аргументацию в отдельную функцию
@@ -874,14 +886,38 @@ void getargs(bool parenthesized, int min, int max) {
 				break;
 			case '!': case '=': case '<': case '>': case '~':
 			case '{': case '}': case '"': case '&': case '?':
-			case '-': case '+': case '*': case '^': case '/': case ':':
+			case '+': case '*': case '^': case '/': case ':':
 				ops[argnum + 1] = str[symnum];//-1
 				ops[0] = 'T';
 				if (test == true)
 					cout << symnum << " - " << str[symnum] << " - действие задано" << endl;
 				break;
+			case '-':
+				switch (str[symnum + 1]) {
+					case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+						negative = true;
+						if (test == true)
+							cout << symnum << " - " << str[symnum] << " - установлен отрицательный знак" << endl;
+						break;
+					default:
+						ops[argnum + 1] = '-';
+						ops[0] = 'T';
+						if (test == true)
+							cout << symnum << " - " << str[symnum] << " - действие задано" << endl;
+						break;
+				}
+				break;
 			case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
-				readint(str[symnum] - '0'); break;
+				readint(str[symnum] - '0'); 
+				if (negative == true) {
+					if (args[argnum] == "int")
+						argint[argnum] *= -1;
+					if (args[argnum] == "float")
+						argfloat[argnum] *= -1;
+					//if (args[argnum] == "bool")
+					negative = false;
+				}
+				break;
 			case '(':
 				if (test == true)
 					cout << symnum << " - ( - начало аргументации" << endl;
