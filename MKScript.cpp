@@ -806,6 +806,10 @@ bool checkmatch(string literal, string type) {//getargs()
 			switch (literal[symnum]) {
 				case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
 					break;
+				case '-':
+					if (symnum > 0)
+						return false;
+					break;
 				default:
 					return false;
 			}
@@ -820,6 +824,10 @@ bool checkmatch(string literal, string type) {//getargs()
 					if (point == false)
 						point = true;
 					else
+						return false;
+					break;
+				case '-':
+					if (symnum > 0)
 						return false;
 					break;
 				default:
@@ -871,7 +879,6 @@ void askvar(int var, string mistake) {
 	else
 		cout << mistake << endl;
 }
-
 
 string output() {
 	string outstr = "";
@@ -1027,8 +1034,16 @@ int main() {
 	print[0] = "0";
 	errors[0] = "0";
 	while (getline(code, strget)) {
-		//cout << strget << endl;
 		strnum++;
+		if (strget == "")
+			continue;
+		else {
+			for (symnum = 0; symnum < strget.length() + 1; symnum++)
+				if (strget[symnum] != '\t' and strget[symnum] != '\n' and strget[symnum] != ' ')
+					break;
+			if (symnum == strget.length())
+				continue;
+		}
 		if (skip == true) {
 			skip = false;
 			continue;
@@ -1047,17 +1062,20 @@ int main() {
 		for (symnum = 0; symnum < strget.length(); symnum++) {
 			for (i = 0; i < 119; i++)
 				if (strget[symnum] == alphabet[i])
-					break;
-			//if (strget[symnum] == ' ' or strget[symnum] == '\0' or strget[symnum] == '\t')
+					break;			
 			if (i < 119)
 				break;
 			strget.erase(symnum, 1);
 			symnum--;
 		}
+		for (symnum = 0; symnum < strget.length() + 1; symnum++)
+			if (strget[symnum] == '\t' or strget[symnum] == '\n') {
+				strget.erase(symnum, 1);
+				symnum--;
+			}
 		str = strget;
 		if (test == true)
 			cout << "обработанная строка: " << str << endl;
-
 		if (str[0] == 'w') {
 			str = "изрекаю";
 			for (symnum = 1; symnum < strget.length(); symnum++)
@@ -1074,9 +1092,7 @@ int main() {
 				cout << endl << "вывод: ";
 			cout << output() << endl;
 			print[0] = to_string(stoi(print[0]) + 1);
-			print[stoi(print[0])] = output();
-			
-				
+			print[stoi(print[0])] = output();				
 		}			
 		if (str.rfind("обозначим", 0) == 0) {
 			function = "обозначим";
