@@ -4,9 +4,18 @@
 #include <locale>
 #include <windows.h>
 #include <fstream>
+#include <chrono>
+
+#include  <stdio.h> 
+#include  <stdlib.h> 
+
+
+using namespace std::chrono;
 using namespace std;
 
 bool autoround = true, autospace = true, test = false;
+
+time_point<high_resolution_clock> timer = high_resolution_clock::now();
 
 bool skip; string errors[1024], str, strget, function; int i, symnum, strnum;
 
@@ -28,6 +37,10 @@ void error(string reason) {
 	if (reason.length() == 2)
 		reason += " - неожиданный символ";
 	errors[stoi(errors[0])] = "строка " + to_string(strnum) + ": " + reason;
+	cout << errors[1] << endl << "программа прервана" << endl;
+	cout << "время выполнения программы: " << duration_cast<seconds>(high_resolution_clock::now() - timer).count() << " сек." << endl;
+	Sleep(10000);
+	exit(1);
 }
 
 void addvar(string name, string type) {
@@ -1029,7 +1042,6 @@ int main() {
 		comparison = '\0';		
 		function = "notset";
 		str = "";
-
 		if (test == true)
 			cout << "удаление пробелов..." << endl;
 		for (symnum = 0; symnum < strget.length(); symnum++) {
@@ -1060,7 +1072,7 @@ int main() {
 				perform();
 			if (test == true)
 				cout << endl << "вывод: ";
-			//cout << output() << endl;
+			cout << output() << endl;
 			print[0] = to_string(stoi(print[0]) + 1);
 			print[stoi(print[0])] = output();
 			
@@ -1171,18 +1183,17 @@ int main() {
 			}
 		}
 		clean();
-	}	
-
-	if (errors[0] == "0")
-		for (i = 1; i < stoi(print[0]) + 1; i++)
-			cout << print[i] << endl;
-	else {
-		cout << endl << endl << "ошибки: " << errors[0] << endl;
-		for (i = 1; i < stoi(errors[0]) + 1; i++) {
-			cout << "ошибка " << i << ": " << errors[i] << endl;
-			errors[i] = "";
-		}
-		errors[0] = "0";
 	}
+	cout << endl << endl << endl << "программа завершена без ошибок" << endl;
+	cout << "время выполнения программы: " << duration_cast<seconds>(high_resolution_clock::now() - timer).count() << " сек." << endl;
 	//fullclean();
+	Sleep(10000);
+	/*
+	for (i = 10; i >= 0; i--) {
+		cout << "автоматическое закрытие консоли через " << i << endl;
+		Sleep(1000);
+		cout << "\033[F\033[K";		
+	}	
+	exit(0);	
+	*/
 }
