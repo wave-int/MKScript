@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <fstream>
 #include <chrono>
+#include <vector>
 
 #include  <stdio.h> 
 #include  <stdlib.h> 
@@ -17,7 +18,7 @@ bool autoround = true, autospace = true, test = false;
 
 time_point<high_resolution_clock> timer = high_resolution_clock::now();
 
-bool skip; string errors[1024], str, strget, function; int i, symnum, strnum;
+bool skip; int repeat; string errors[1024], str, strget, function; int i, symnum, strnum; vector<string> code;
 
 string print[1024], args[1024]; int argnum; char ops[1024], comparison;
 
@@ -1028,12 +1029,20 @@ int main() {
 	SetConsoleCP(1251);
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleTextAttribute(hConsole, 11);
-	string file;
+	//string file;
 	//getline(cin, file);
-	ifstream code("код.txt");		
+	ifstream file("код.txt");		
 	print[0] = "0";
 	errors[0] = "0";
-	while (getline(code, strget)) {
+	repeat = 0;
+	while (getline(file, strget)) {
+		begin:
+		if (repeat > 0) {
+			if (test == true)
+				cout << "итераций осталось : " << repeat << endl << endl;
+			repeat--;
+			strnum--;
+		}
 		strnum++;
 		if (strget == "")
 			continue;
@@ -1179,8 +1188,32 @@ int main() {
 			}
 			
 		}
+		if (str.rfind("петля", 0) == 0) {
+			function = "петля";
+			if (test == true)
+				cout << endl << "функция: петля" << endl;
+			getargs(true, 1, 1);
+			if (repeat > 0)
+				error("вложенная петля не может быть вызвана (пока)");
+			if (args[1] == "int")
+				repeat = argint[1];
+			else
+				if (args[i] == "float")
+					error("петля принимает только целое число");
+				else
+					error("петля принимает только числовое значение");
+			if (repeat < 0)
+				repeat *= -1;
+			if (repeat == 0)
+				skip = true;
+			if (repeat > 0 and test == true)
+				cout << "цикл:" << endl;
+			continue;
+		}
+
 		if (function == "notset")
 			error("функция не задана");	
+
 		if (test == true) {
 			cout << endl << "переменные:" << endl;
 			for (i = 1; i < vars + 1; i++) {
@@ -1197,13 +1230,16 @@ int main() {
 					else
 						cout << "фейк" << endl;
 			}
-		}
+			cout << endl;
+		}		
 		clean();
+		if (repeat > 0)
+			goto begin;
 	}
 	cout << endl << endl << endl << "программа завершена без ошибок" << endl;
 	cout << "время выполнения программы: " << duration_cast<seconds>(high_resolution_clock::now() - timer).count() << " сек." << endl;
 	//fullclean();
-	Sleep(10000);
+	Sleep(100000);
 	/*
 	for (i = 10; i >= 0; i--) {
 		cout << "автоматическое закрытие консоли через " << i << endl;
