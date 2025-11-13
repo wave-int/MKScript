@@ -6,21 +6,23 @@
 #include <fstream>
 #include <chrono>
 #include <vector>
-
 #include  <stdio.h> 
 #include  <stdlib.h> 
-
 
 using namespace std::chrono;
 using namespace std;
 
-bool autoround = true, autospace = true, test = false;
+bool autoround = true, autospace = true, test = false; 
 
 time_point<high_resolution_clock> timer = high_resolution_clock::now();
 
-bool skip; int repeat; string errors[1024], str, strget, function; int i, symnum, strnum; vector<string> code;
+char comparison; struct condition {string left; char comparison; string right;};
 
-string print[1024], args[1024]; int argnum; char ops[1024], comparison;
+int repeatstr, repeatblock, ignorestr; bool repeatstrwhile, repeatblockwhile; bool back;
+	
+bool skip, cancel; int block = 0; string errors[1024], str, function; int i, symnum, strnum; vector<string> code;
+
+string print[1024], args[1024]; int argnum, endargs; char ops[1024];
 
 string argstr[1024]; int argint[1024]; float argfloat[1024]; bool argbool[1024];
 
@@ -28,7 +30,9 @@ string varnames[1024]; string vartypes[1024]; int vars = 0, selectedvar;
 
 string varstr[1024]; int varint[1024]; float varfloat[1024]; bool varbool[1024];
 
-string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\n";//118
+
+string alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZабвгдеёжзийклмнопрстуфхцчшщъыьэюяАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\0";//118
+string symbols = "-+*/^!=<>~{}&?:\'\";\0";
 string keywords[15] = {"skip", "str", "int", "float", "bool", "unknown", "assign", "строка", "число", "дробь", "булево", "тру", "фейк", "изрекаю", "обозначим"};
 
 void error(string reason) {
@@ -253,9 +257,10 @@ void readidentifier() {
 				error("некорректная запись идентификатора");
 		}
 	} while (text == true);
+	//переделать
 	if (function == "обозначим") {
 		if (argnum == 1)
-			if (identifier != "тру" && identifier != "фейк") {
+			if (identifier != "тру" && identifier != "фейк" && identifier != "str" && identifier != "int" && identifier != "float" && identifier != "bool") {
 				for (i = 1; i < 15; i++)
 					if (identifier == keywords[i])
 						free = false;
@@ -297,7 +302,7 @@ void readidentifier() {
 		}
 		for (i = 1; i < vars + 1; i++)
 			if (identifier == varnames[i])
-				if (function == "спросить")
+				if (function == "спросить" or function == "петля")
 					args[argnum] = identifier;
 				else{
 					args[argnum] = vartypes[i];
@@ -322,6 +327,34 @@ void readidentifier() {
 		error("нет запятой");
 }
 
+void getvalues() {
+	if (test == true)
+		cout << "получение значений..." << endl;
+	int num;
+	for (num = 1; num < argnum + 1; num++) {
+		if (args[num] == "str" or args[num] == "int" or args[num] == "float" or args[num] == "bool" or args[num] == "action")
+			continue;
+		varnames[vars + 1] == "0";//!
+		for (i = 1; i < vars + 2; i++)
+			if (args[num] == varnames[i])
+				break;
+		if (i == vars + 1)
+			error("неизвестное имя: " + args[num]);
+		else {
+			args[num] = vartypes[i];
+			if (args[num] == "str")
+				argstr[num] = varstr[i];
+			if (args[num] == "int")
+				argint[num] = varint[i];
+			if (args[num] == "float")
+				argfloat[num] = varfloat[i];
+			if (args[num] == "bool")
+				argbool[num] = varbool[i];
+			//if (args[num] == "action")
+				//argact[num] = varargt[i];
+		}
+	}
+}
 void perform() {
 	string operands;
 	int first = 1;
@@ -712,7 +745,13 @@ bool compare(string left, char type, string right){//перегрузить
 		cout << "вид сравнения: " << type << endl;
 		//cout << "правое значение:" << right << endl;
 		cout << "результат: ";
-	}	
+	}
+	//getvalues();
+	if (left != right) {
+		if (test == true)
+			cout << "(конфликт типов) " << endl;
+		return false;
+	}
 	if (left == "str" and right == "str")
 		switch (type) {
 			case '!':
@@ -734,68 +773,74 @@ bool compare(string left, char type, string right){//перегрузить
 		}	
 	if (left == "int" and right == "int")
 		switch (type) {
-		case '!':
-			if (argint[1] != argint[2])
-				return true;
-			break;
-		case '=':
-			if (argint[1] == argint[2])
-				return true;
-			break;
-		case '<':
-			if (argint[1] < argint[2])
-				return true;
-			break;
-		case '>':
-			if (argint[1] > argint[2])
-				return true;
-			break;
+			case '!':
+				if (argint[1] != argint[2])
+					return true;
+				break;
+			case '=':
+				if (argint[1] == argint[2])
+					return true;
+				break;
+			case '<':
+				if (argint[1] < argint[2])
+					return true;
+				break;
+			case '>':
+				if (argint[1] > argint[2])
+					return true;
+				break;
 		}
 	if (left == "float" and right == "float")
 		switch (type) {
-		case '!':
-			if (argfloat[1] != argfloat[2])
-				return true;
-			break;
-		case '=':
-			if (argfloat[1] == argfloat[2])
-				return true;
-			break;
-		case '<':
-			if (argfloat[1] < argfloat[2])
-				return true;
-			break;
-		case '>':
-			if (argfloat[1] > argfloat[2])
-				return true;
-			break;
+			case '!':
+				if (argfloat[1] != argfloat[2])
+					return true;
+				break;
+			case '=':
+				if (argfloat[1] == argfloat[2])
+					return true;
+				break;
+			case '<':
+				if (argfloat[1] < argfloat[2])
+					return true;
+				break;
+			case '>':
+				if (argfloat[1] > argfloat[2])
+					return true;
+				break;
 		}
 	if (left == "bool" and right == "bool")
 		switch (type) {
-		case '!':
-			if (argbool[1] != argbool[2])
-				return true;
-			break;
-		case '=':
-			if (argbool[1] == argbool[2])
-				return true;
-			break;
-		case '<':
-			if (argbool[1] < argbool[2])
-				return true;
-			break;
-		case '>':
-			if (argbool[1] > argbool[2])
-				return true;
-			break;
+			case '!':
+				if (argbool[1] != argbool[2])
+					return true;
+				break;
+			case '=':
+				if (argbool[1] == argbool[2])
+					return true;
+				break;
+			case '<':
+				if (argbool[1] < argbool[2])
+					return true;
+				break;
+			case '>':
+				if (argbool[1] > argbool[2])
+					return true;
+				break;
 		}
-	if (left != right and test == true)
-		cout << "(конфликт типов) " << endl;
 	return false;
 }
 
+
+int varcheck(string arg) {
+	for (i = 1; i < vars + 1; i++)
+		if (arg == varnames[i])
+			return i;
+	return 0;
+}
 bool checkmatch(string literal, string type) {//getargs()
 	bool point = false;
+	int symnum = 0;//!
 	if (type == "str") {
 		for (symnum = 0; symnum < literal.length(); symnum++)
 			if (literal[symnum] == '\t' or literal[symnum] == '\n' or literal[symnum] == '\0' or literal[symnum] == '|')
@@ -901,26 +946,16 @@ string output() {
 	return outstr;
 }
 
-bool afterargs() {
-	string end = "";
-	for (symnum += 1; symnum < str.length(); symnum++)
-		if (str[symnum] != ' ')
-			end += str[symnum];
-	if (end == ";" and function != "сравнивание")
-		return false;
-	if (end == "значит" and function == "вдруг")
-		return false;
-	return true;
-}
 void getargs(bool parenthesized, int min, int max) {
-	bool start = false;
-	bool finish = false;
+	bool open = false;
+	bool closed = false;
 	bool negative = false;
 	if (test == true)
 		cout << endl << "аргументация:" << endl;
-	for (symnum = (function == "assign" ? varnames[selectedvar].length() : function.length()); symnum < str.length() and errors[0] == "0"; symnum++) {//вынести аргументацию в отдельную функцию
+	for (symnum = (function == "assign" ? varnames[selectedvar].length() : function.length()); symnum < str.length() and errors[0] == "0"; symnum++) {
 		if (ops[argnum + 1] == '\0')
 			ops[argnum + 1] = 's';
+		endargs = symnum;
 		switch (str[symnum]) {
 			case ' ': 
 				if (test == true)
@@ -935,9 +970,12 @@ void getargs(bool parenthesized, int min, int max) {
 				if (test == true)
 					cout << symnum << " - , - запятая" << endl;
 				break;
-			case ';': 
+			case ';':
 				if (test == true)
-					cout << symnum << " - ; - конец команды" << endl << endl; 
+					cout << symnum << " - ; - конец команды" << endl << endl;
+				if (parenthesized == true and closed == true)
+					symnum--;
+				return;
 				break;
 			case '!': case '=': case '<': case '>': case '~':
 			case '{': case '}': case '"': case '&': case '?':
@@ -976,17 +1014,18 @@ void getargs(bool parenthesized, int min, int max) {
 			case '(':
 				if (test == true)
 					cout << symnum << " - ( - начало аргументации" << endl;
-				if (start == true)
+				if (open == true)
 					error("повторное начало аргументации");
-				start = true;
+				open = true;
 				break;
 			case ')':
 				if (test == true)
 					cout << symnum << " - ) - конец аргументации" << endl;
-				if (afterargs() == true)
-					error("не предусмотренное продолжение команды");
-				finish = true;
-
+				//str[symnum] = '\0';
+				if (closed == true)
+					error("повторное закрытие скобки");
+				closed = true;				
+				return;
 				break;
 			case '\'': readstr(); break;
 			default:
@@ -999,13 +1038,110 @@ void getargs(bool parenthesized, int min, int max) {
 	}
 
 	if (parenthesized == true){
-		if (start == false)
+		if (open == false)
 			error("нет открывающей скобки");
-		if (finish == false)
+		if (closed == false)
 			error("нет закрывающей скобки");		
 	}
 	if (argnum == 0)
 		error("аргументы отсутствуют");	
+}
+string removespaces(string strget) {
+	if (strget == "")
+		return "";
+	for (symnum = 0; symnum < strget.length(); symnum++) {
+		if (strget[symnum] == '\t' or strget[symnum] == ' ') {
+			strget.erase(symnum, 1);
+			symnum--;
+		}
+	}
+	return strget;	
+}//в одну функцию
+string clearstr(string strget) {
+	string cleanstr = "";
+	if (strget == "")
+		return "";
+	if (test == true)
+		cout << "удаление пробелов..." << endl;
+	for (symnum = 0; symnum < strget.length(); symnum++) {
+		for (i = 0; i < 119; i++)
+			if (strget[symnum] == alphabet[i])
+				break;
+		if (i < 119)
+			break;
+		for (i = 0; i < 19; i++)
+			if (strget[symnum] == symbols[i])
+				break;
+		if (i < 21)
+			break;
+		strget.erase(symnum, 1);
+		symnum--;
+	}
+	for (symnum = 0; symnum < strget.length() + 1; symnum++)
+		if (strget[symnum] == '\t' or strget[symnum] == '\n') {
+			strget.erase(symnum, 1);
+			symnum--;
+		}
+	for (symnum = 0; symnum < strget.length() + 1; symnum++)
+		if (strget[symnum] != '\t' and strget[symnum] != '\n' and strget[symnum] != ' ')
+			break;
+	cleanstr = strget;
+	if (symnum == cleanstr.length())
+		return "";
+	else
+		return cleanstr;
+	if (test == true)
+		cout << "обработанная строка: " << cleanstr << endl;
+}
+string afterargs(bool expect) {
+	string end = "";
+	symnum = 0;
+	//while (symnum < str.length() and str[symnum] != ')')
+		//symnum++;
+	symnum = endargs;
+	if (str[symnum] == ')')
+		symnum++;
+	for (symnum; symnum < str.length(); symnum++)
+		end += str[symnum];
+	end = clearstr(end);
+	if (function != "вдруг" && function != "петля" && end != ";")
+	//if (expect == false && end != ";")		
+		return "error";		
+	if (function == "вдруг" or function == "петля")
+		if (removespaces(end) == "поехали") {
+			return "error";
+			/*
+			if (block > 0 and block < strnum)
+				error("начало блока кода уже задано");
+			//block = strnum;
+			if (test == true)
+				cout << "начало блока кода" << endl;
+			//block = strnum;
+			return "start";
+			*/
+		}
+		else
+			if (end == "")
+				return "";
+			else
+				return "error";
+	if (end == ";")
+		return "semicolon";
+	return "error";		
+}
+void checkendblock(int start) {
+	bool end = false;
+	bool newblock = false;
+	for (strnum = start; strnum < code.size() - 1; strnum++) {
+		if (clearstr(code[strnum]) == "хватит;")
+			end = true;
+		if (clearstr(code[strnum]) == "поехали;" and end == false)
+			error("вложенные конструкции запрещены");
+	}
+	if (end == false)
+		error("окончание блока не задано");
+	strnum = start;
+	str = clearstr(code[strnum]);
 }
 
 void clean() {
@@ -1023,6 +1159,15 @@ void clean() {
 }
 void fullclean() {}
 
+void skipblock(){
+	if (test == true)
+		cout << "пропуск блока" << endl;
+	do
+		strnum++;
+	while (strnum < code.size() - 1 and clearstr(code[strnum]) != "хватит;");
+	block = 0;
+}
+
 int main() {
 	setlocale(LC_ALL, "");
 	SetConsoleOutputCP(1251);
@@ -1031,92 +1176,106 @@ int main() {
 	SetConsoleTextAttribute(hConsole, 11);
 	//string file;
 	//getline(cin, file);
-	ifstream file("код.txt");		
 	print[0] = "0";
 	errors[0] = "0";
-	repeat = 0;
-	while (getline(file, strget)) {
-		begin:
-		if (repeat > 0) {
-			if (test == true)
-				cout << "итераций осталось : " << repeat << endl << endl;
-			repeat--;
-			strnum--;
-		}
-		strnum++;
-		if (strget == "")
-			continue;
-		else {
-			for (symnum = 0; symnum < strget.length() + 1; symnum++)
-				if (strget[symnum] != '\t' and strget[symnum] != '\n' and strget[symnum] != ' ')
-					break;
-			if (symnum == strget.length())
-				continue;
-		}
-		if (skip == true) {
-			skip = false;
-			continue;
-		}
-		//getline(cin, strget);		
+	repeatblock = 0;
+	repeatstr = 0;
+	ignorestr = 0;
+	code.push_back("");
+	ifstream file("код.txt");	
+	while (getline(file, str))
+		code.push_back(str);
+	endargs = 0;
+	for (strnum = 1; strnum < code.size(); strnum++) {
 		argint[0] = 0;
 		argstr[0] = "";
 		argnum = 0;
 		symnum = 0;
 		ops[0] = 'F';
-		comparison = '\0';		
-		function = "notset";
-		str = "";
-		if (test == true)
-			cout << "удаление пробелов..." << endl;
-		for (symnum = 0; symnum < strget.length(); symnum++) {
-			for (i = 0; i < 119; i++)
-				if (strget[symnum] == alphabet[i])
-					break;			
-			if (i < 119)
-				break;
-			strget.erase(symnum, 1);
-			symnum--;
+		comparison = '\0';
+		function = "none";
+
+		begin:		
+		if (errors[0] != "0")
+			break;
+		
+		//strnum++;
+		str = clearstr(code[strnum]);
+		if (str == "")
+			continue;
+		if (strnum == ignorestr)
+			continue;
+		if (skip == true) {
+			if (block > 0)
+				skipblock();
+			skip = false;
+			continue;
 		}
-		for (symnum = 0; symnum < strget.length() + 1; symnum++)
-			if (strget[symnum] == '\t' or strget[symnum] == '\n') {
-				strget.erase(symnum, 1);
-				symnum--;
-			}
-		str = strget;
-		if (test == true)
-			cout << "обработанная строка: " << str << endl;
-		if (str[0] == 'w') {
-			str = "изрекаю";
-			for (symnum = 1; symnum < strget.length(); symnum++)
-				str += strget[symnum];
-		}	
-		if (str.rfind("изрекаю", 0) == 0) {
-			function = "изрекаю";
+		
+		
+		if (str == "хватит;") {
 			if (test == true)
-				cout << endl << "функция: изрекаю" << endl;
-			getargs(true, 0, 0);
-			if (ops[0] == 'T')
-				perform();
+				cout << "окончание блока кода" << endl;
+			if (block == 0 and repeatblock == 0)
+				error("начало блока кода не задано");
+			else
+				if (repeatblock == 0 and repeatblockwhile == false) {
+					block = 0;
+					continue;
+					//str = clearstr(code[strnum]);
+				}
+				else {
+					if (repeatblock > 0) {
+						//repeatblock--;
+						if (test == true)
+							cout << "итераций осталось : " << repeatblock << endl << endl;
+						strnum = block - 1;
+						str = clearstr(code[strnum]);
+						continue;
+					}
+					if (repeatblockwhile == true) {
+						strnum = block - 1;
+						str = clearstr(code[strnum]);
+						continue;
+					}
+						
+				}				
+					
+		}
+		if (str == "поехали") {
+			checkendblock(strnum);
+			function = "поехали";
+			//if (block > 0)// and block != strnum)
+				//error("вложенный блок кода");
+			//else
+				if (strnum > 1) {
+					//проверить прошлые строки на условия и циклы	
+					ignorestr = strnum;
+					block = strnum - 1;
+				}
+				else
+					error("блок кода не может быть началом программы");
+			continue;
+		}
+			
+		if (str == "отбой;") {
 			if (test == true)
-				cout << endl << "вывод: ";
-			cout << output() << endl;
-			print[0] = to_string(stoi(print[0]) + 1);
-			print[stoi(print[0])] = output();				
-		}			
-		if (str.rfind("обозначим", 0) == 0) {
-			function = "обозначим";
-			if (test == true)
-				cout << endl << "функция: обозначим" << endl;
-			getargs(true, 2, 2);
-			if (args[1] != "unknown")
-				if (args[2] == "строка" or args[2] == "число" or args[2] == "дробь" or args[2] == "булево")
-					addvar(args[1], args[2]);
-		}			
+				cout << "прерывание блока кода" << endl;
+			if (block == 0)
+				error("прерывание вне блока кода");
+			else
+				skipblock();
+			continue;			
+		}
+
 		if (str.rfind("вдруг", 0) == 0) {
+			
 			function = "вдруг";
 			if (test == true)
-				cout << endl << "функция: сравнивание" << endl;			
+				cout << endl << "функция: сравнивание" << endl;
 			getargs(true, 2, 0);
+			if (afterargs(false) == "error")
+				error("не предусмотренное продолжение команды");
 			if (ops[0] == 'T')
 				perform();
 			for (i = 1; argnum; i++) {
@@ -1151,28 +1310,196 @@ int main() {
 			if (args[2] == "float")
 				argfloat[2] == argfloat[argnum];
 			if (args[2] == "bool")
-				argbool[2] == argbool[argnum];			
+				argbool[2] == argbool[argnum];
 			if (errors[0] != "0")
 				cout << "ошибка" << endl;
 			else
 				if (compare(args[1], comparison, args[2]) == false) {
 					if (test == true)
 						cout << "фейк" << endl;
-					skip = true;
+					//if (afterargs(true) == "start" or clearstr(code[symnum + 1]) == "поехали")
+					if (clearstr(code[strnum + 1]) == "поехали")
+						skipblock();
+					else
+						skip = true;
 				}
-				else
+				else {
 					if (test == true)
-						cout << "тру" << endl;	
+						cout << "тру" << endl;
+					//if (afterargs(true) == "start" or clearstr(code[symnum + 1]) == "поехали")
+					if (clearstr(code[strnum + 1]) == "поехали")
+						block = strnum;
+				}
+					
 		}
-		for (i = 1; i < vars + 1; i++)
-			if (str.rfind(varnames[i], 0) == 0) {
-				function = "assign";
-				selectedvar = i;
-				getargs(false, 1, 0);
-				if (ops[0] == 'T')
-					perform();
-				assignvar(selectedvar);
+		if (str.rfind("петля", 0) == 0) {
+			
+			if (repeatstr > 0) {
+				repeatstr--;
+				continue;
 			}
+			if (repeatblock > 0) {
+				repeatblock--;
+				if (repeatblock == 0)
+					skip = true;
+				continue;
+			}
+			function = "петля";
+			if (test == true)
+				cout << endl << "функция: петля" << endl;
+			getargs(true, 1, 2);
+			if (afterargs(false) == "error")
+				error("не предусмотренное продолжение команды");
+			if (ops[0] == 'T')
+				perform();
+
+			if (repeatstr > 0 or repeatblock > 0)
+				if (strnum > block)
+					error("вложенная петля не может быть вызвана (пока)");
+
+
+
+			if (strnum == code.size() - 1)
+				error("непредвиденное прерывание программы");
+			else {
+				//if (clearstr(code[strnum + 1]) != "поехали" and afterargs(true) != "start") {
+				if (clearstr(code[strnum + 1]) != "поехали"){
+					if (comparison == '\0')//repeatstr
+						if (argnum == 1) {
+							if (test == true)
+								cout << "задан цикл с счетчиком" << endl;
+							if (varcheck(args[1]) > 0)
+								if (vartypes[i] == "int")//сделать нормально
+									repeatstr = varint[i];
+								else
+									error("счетчик принимает только числовое значение");
+							else {
+								if (args[1] == "int")
+									repeatstr = argint[1];
+								else
+									if (args[i] == "float")
+										error("счетчик принимает только целое число");
+									else
+										error("счетчик принимает только числовое значение");
+							}							
+							if (repeatstr < 0)
+								repeatstr *= -1;
+							if (repeatstr == 0)
+								skip = true;
+						}
+						else
+							error("неверная аргументация цикла");
+					else {//repeatstrwhile
+						if (test == true)
+							cout << "задан цикл с условием" << endl;
+
+						if (test == true)
+							cout << endl << "функция: сравнивание" << endl;
+						getvalues();
+						if (compare(args[1], comparison, args[2]) == false)
+							skip = true;
+						else
+							back = true;
+
+
+
+						//repeatstrwhile.left = args[1];
+						//repeatstrwhile.comparison = ops[2];
+						//repeatstrwhile.right = args[2];
+					}
+
+				}
+				else {
+					if (comparison == '\0'){//repeatblock							
+						if (argnum == 1) {
+							if (test == true)
+								cout << "задан цикл с счетчиком" << endl;
+
+							getvalues();
+							if (args[1] == "int") 
+								if (argint[1] != 0) {
+									block = strnum;
+									repeatblock = argint[1];
+								}
+								else
+									error("нулевой цикл");
+							else
+								if (args[i] == "float")
+									error("счетчик принимает только целое число");
+								else
+									error("счетчик принимает только числовое значение");
+
+							if (repeatblock < 0)
+								repeatblock *= -1;
+						}
+						else
+							error("неверная аргументация цикла");
+
+						//if (clearstr(code[strnum + 1]) == "поехали;")
+							//block = strnum + 1;
+						//if (afterargs(true) == "start")
+							//block = strnum;
+					}
+					else {//repeatblockwhile
+						if (test == true)
+							cout << "задан цикл с условием" << endl;
+						repeatblockwhile = false;
+						if (argnum == 2) {
+							getvalues();
+							//if (clearstr(code[strnum + 1]) == "поехали" or afterargs(true) == "start") {
+							if (clearstr(code[strnum + 1]) == "поехали"){
+								block = strnum;
+								if (test == true)
+									cout << endl << "функция: сравнивание" << endl;
+								if (compare(args[1], comparison, args[2]) == false)
+									//skip = true;
+									skipblock();
+								else {
+									//back = true;
+									repeatblockwhile = true;//varint[1]
+								}
+									
+							}
+							//repeatblockwhile.left = args[1];
+							//repeatblockwhile.comparison = ops[2];
+							//repeatblockwhile.right = args[2];
+
+						}
+						else
+							error("неверная аргументация цикла");
+						//if (clearstr(code[strnum + 1]) == "поехали;")
+								//block = strnum + 1;
+						//if (afterargs(true) == "start")
+							//block = strnum;
+					}
+				}
+			}
+			continue;
+		}
+
+		if (str.rfind("изрекаю", 0) == 0) {
+			function = "изрекаю";
+			if (test == true)
+				cout << endl << "функция: изрекаю" << endl;
+			getargs(true, 0, 0);
+			if (ops[0] == 'T')
+				perform();
+			if (test == true)
+				cout << endl << "вывод: ";
+			cout << output() << endl;
+			print[0] = to_string(stoi(print[0]) + 1);
+			print[stoi(print[0])] = output();				
+		}		
+
+		if (str.rfind("обозначим", 0) == 0) {
+			function = "обозначим";
+			if (test == true)
+				cout << endl << "функция: обозначим" << endl;
+			getargs(true, 2, 2);
+			if (args[1] != "unknown")
+				if (args[2] == "строка" or args[2] == "число" or args[2] == "дробь" or args[2] == "булево")
+					addvar(args[1], args[2]);
+		}			
 		if (str.rfind("спросить", 0) == 0) {
 			function = "спросить";
 			getargs(false, 1, 2);
@@ -1186,33 +1513,24 @@ int main() {
 					askvar(i, argstr[2]);
 				//error("нельзя вводить двоичные данные");
 			}
-			
-		}
-		if (str.rfind("петля", 0) == 0) {
-			function = "петля";
-			if (test == true)
-				cout << endl << "функция: петля" << endl;
-			getargs(true, 1, 1);
-			if (repeat > 0)
-				error("вложенная петля не может быть вызвана (пока)");
-			if (args[1] == "int")
-				repeat = argint[1];
-			else
-				if (args[i] == "float")
-					error("петля принимает только целое число");
-				else
-					error("петля принимает только числовое значение");
-			if (repeat < 0)
-				repeat *= -1;
-			if (repeat == 0)
-				skip = true;
-			if (repeat > 0 and test == true)
-				cout << "цикл:" << endl;
-			continue;
-		}
 
-		if (function == "notset")
+		}
+		for (i = 1; i < vars + 1; i++)
+			if (str.rfind(varnames[i], 0) == 0) {
+				function = "assign";
+				selectedvar = i;
+				getargs(false, 1, 0);
+				if (ops[0] == 'T')
+					perform();
+				assignvar(selectedvar);
+			}		
+
+		if (function == "none")
 			error("функция не задана");	
+
+		//if (function != "вдруг" and function != "петля")
+			if (afterargs(false) == "error")
+				error("не предусмотренное продолжение команды");
 
 		if (test == true) {
 			cout << endl << "переменные:" << endl;
@@ -1232,9 +1550,20 @@ int main() {
 			}
 			cout << endl;
 		}		
+		if (repeatstr > 1) {
+			repeatstr--;
+			strnum--;
+		}
+		if (back == true) {
+			back = false;
+			strnum -= 2;
+		}
+		
+
+
 		clean();
-		if (repeat > 0)
-			goto begin;
+		//if (repeat > 0)
+			//goto begin;
 	}
 	cout << endl << endl << endl << "программа завершена без ошибок" << endl;
 	cout << "время выполнения программы: " << duration_cast<seconds>(high_resolution_clock::now() - timer).count() << " сек." << endl;
